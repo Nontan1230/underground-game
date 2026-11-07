@@ -1,0 +1,929 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UNDERGROUND</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #111;
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+#game {
+  position: fixed;
+  inset: 0;
+}
+
+canvas {
+  display: block;
+}
+
+#overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #000a;
+  pointer-events: none;
+}
+
+#panel {
+  width: min(90%, 430px);
+  padding: 38px 30px;
+  text-align: center;
+  background: #171a20;
+  border: 1px solid #ffffff33;
+  border-radius: 12px;
+  box-shadow: 0 15px 60px #0008;
+}
+
+#panel h1 {
+  margin: 0 0 12px;
+  font-size: 34px;
+  letter-spacing: 5px;
+}
+
+#panel p {
+  color: #bbb;
+  font-size: 14px;
+  line-height: 1.9;
+}
+
+#enterText {
+  margin-top: 25px;
+  padding: 13px;
+  border: 1px solid #ffffff55;
+  border-radius: 5px;
+  color: white;
+  font-size: 15px;
+  letter-spacing: 3px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+#hud {
+  position: fixed;
+  z-index: 2;
+  top: 18px;
+  left: 20px;
+  color: #ffffffbb;
+  font-size: 13px;
+  line-height: 1.8;
+  text-shadow: 0 1px 5px black;
+  pointer-events: none;
+}
+
+#crosshair {
+  position: fixed;
+  z-index: 3;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ffffffbb;
+  transform: translate(-50%, -50%);
+  display: none;
+  pointer-events: none;
+}
+
+#error {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 25px;
+  background: #171a20;
+  color: #ffaaaa;
+  text-align: center;
+  font-family: monospace;
+}
+</style>
+</head>
+
+<body>
+
+<div id="game"></div>
+
+<div id="hud">
+  UNDERGROUND<br>
+  WASD : MOVE
+</div>
+
+<div id="crosshair"></div>
+
+<div id="overlay">
+  <div id="panel">
+    <h1>UNDERGROUND</h1>
+    <p id="description">
+      どこまでも続く地下通路。<br>
+      周囲を観察しながら進もう。
+    </p>
+
+    <p>
+      W : 前進<br>
+      S : 後退<br>
+      A / D : 左右移動<br>
+      MOUSE : 視点移動
+    </p>
+
+    <div id="enterText">PRESS ENTER</div>
+  </div>
+</div>
+
+<div id="error">
+  <div id="errorText">
+    THREE.JS COULD NOT BE LOADED
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+(() => {
+
+  // =====================================
+  // 1. HTML elements
+  // =====================================
+
+  const container = document.getElementById("game");
+  const overlay = document.getElementById("overlay");
+  const description = document.getElementById("description");
+  const enterText = document.getElementById("enterText");
+  const crosshair = document.getElementById("crosshair");
+  const errorScreen = document.getElementById("error");
+  const errorText = document.getElementById("errorText");
+
+  // =====================================
+  // 2. Check Three.js
+  // =====================================
+
+  if (typeof THREE === "undefined") {
+    errorScreen.style.display = "flex";
+    errorText.textContent =
+      "THREE.JS COULD NOT BE LOADED. CHECK YOUR INTERNET CONNECTION.";
+    return;
+  }
+
+  // =====================================
+  // 3. Three.js setup
+  // =====================================
+
+  const scene = new THREE.Scene();
+
+  scene.background = new THREE.Color(0x85878b);
+  scene.fog = new THREE.Fog(0x85878b, 15, 65);
+
+  const camera = new THREE.PerspectiveCamera(
+    75,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    150
+  );
+
+  camera.position.set(0, 1.65, 15);
+
+  const renderer = new THREE.WebGLRenderer({
+    antialias: true
+  });
+
+  renderer.setSize(
+    window.innerWidth,
+    window.innerHeight
+  );
+
+  renderer.setPixelRatio(
+    Math.min(window.devicePixelRatio || 1, 2)
+  );
+
+  renderer.outputEncoding = THREE.sRGBEncoding;
+
+  container.appendChild(renderer.domElement);
+
+  // =====================================
+  // 4. Materials
+  // =====================================
+
+  function material(color, roughness = 0.9) {
+    return new THREE.MeshStandardMaterial({
+      color: color,
+      roughness: roughness
+    });
+  }
+
+  const wallMat = material(0xd4d3cd);
+  const floorMat = material(0x77797c);
+  const ceilingMat = material(0xb9b9b4);
+  const trimMat = material(0x55575a);
+  const doorMat = material(0x85898a);
+  const yellowMat = material(0xd7b52f);
+  const seamMat = material(0x989994);
+
+  const lampMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    emissive: 0xffffff,
+    emissiveIntensity: 2.2
+  });
+
+  // =====================================
+  // 5. Lighting
+  // =====================================
+
+  scene.add(
+    new THREE.AmbientLight(0xffffff, 0.55)
+  );
+
+  scene.add(
+    new THREE.HemisphereLight(
+      0xffffff,
+      0x666675,
+      0.65
+    )
+  );
+
+  // =====================================
+  // 6. Object helper
+  // =====================================
+
+  function box(w, h, d, mat, x, y, z) {
+
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(w, h, d),
+      mat
+    );
+
+    mesh.position.set(x, y, z);
+    scene.add(mesh);
+
+    return mesh;
+  }
+
+  // =====================================
+  // 7. Corridor
+  // =====================================
+
+  const corridorWidth = 8;
+  const corridorStart = 25;
+  const corridorEnd = -55;
+  const corridorLength = corridorStart - corridorEnd;
+  const corridorCenter = (corridorStart + corridorEnd) / 2;
+
+  // Floor
+  box(
+    corridorWidth,
+    0.2,
+    corridorLength,
+    floorMat,
+    0,
+    -0.1,
+    corridorCenter
+  );
+
+  // Ceiling
+  box(
+    corridorWidth,
+    0.2,
+    corridorLength,
+    ceilingMat,
+    0,
+    3.5,
+    corridorCenter
+  );
+
+  // Walls
+  box(
+    0.2,
+    3.5,
+    corridorLength,
+    wallMat,
+    -4,
+    1.65,
+    corridorCenter
+  );
+
+  box(
+    0.2,
+    3.5,
+    corridorLength,
+    wallMat,
+    4,
+    1.65,
+    corridorCenter
+  );
+
+  // End wall
+  box(
+    8,
+    3.5,
+    0.3,
+    wallMat,
+    0,
+    1.65,
+    corridorEnd
+  );
+
+  // Entrance wall is intentionally omitted.
+
+  // =====================================
+  // 8. Wall tile lines
+  // =====================================
+
+  for (let z = 22; z > corridorEnd; z -= 3) {
+
+    box(
+      0.025,
+      3.35,
+      0.025,
+      seamMat,
+      -3.88,
+      1.65,
+      z
+    );
+
+    box(
+      0.025,
+      3.35,
+      0.025,
+      seamMat,
+      3.88,
+      1.65,
+      z
+    );
+  }
+
+  // Horizontal wall trim
+  for (const y of [0.75, 2.7]) {
+
+    box(
+      0.035,
+      0.025,
+      corridorLength,
+      trimMat,
+      -3.87,
+      y,
+      corridorCenter
+    );
+
+    box(
+      0.035,
+      0.025,
+      corridorLength,
+      trimMat,
+      3.87,
+      y,
+      corridorCenter
+    );
+  }
+
+  // =====================================
+  // 9. Floor tiles
+  // =====================================
+
+  for (let z = 23; z > corridorEnd; z -= 2) {
+
+    box(
+      7.8,
+      0.012,
+      0.025,
+      seamMat,
+      0,
+      0.012,
+      z
+    );
+  }
+
+  // Tactile paving
+  box(
+    0.7,
+    0.025,
+    corridorLength,
+    yellowMat,
+    -0.9,
+    0.015,
+    corridorCenter
+  );
+
+  box(
+    0.7,
+    0.025,
+    corridorLength,
+    yellowMat,
+    0.9,
+    0.015,
+    corridorCenter
+  );
+
+  // Small tactile paving dots
+  const dotMat = material(0xe9cc52);
+
+  for (let z = 22; z > corridorEnd; z -= 0.65) {
+
+    for (const x of [-1.15, -0.65, 0.65, 1.15]) {
+
+      const dot = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.045, 0.045, 0.035, 8),
+        dotMat
+      );
+
+      dot.position.set(x, 0.045, z);
+      scene.add(dot);
+    }
+  }
+
+  // =====================================
+  // 10. Ceiling lights
+  // =====================================
+
+  for (let z = 19; z > corridorEnd; z -= 9) {
+
+    // Light housing
+    box(
+      2.4,
+      0.09,
+      1.1,
+      trimMat,
+      0,
+      3.36,
+      z
+    );
+
+    // Light surface
+    box(
+      2.15,
+      0.035,
+      0.85,
+      lampMat,
+      0,
+      3.30,
+      z
+    );
+
+    // Actual light
+    const light = new THREE.PointLight(
+      0xfff2df,
+      1.15,
+      15
+    );
+
+    light.position.set(0, 3.05, z);
+    scene.add(light);
+  }
+
+  // =====================================
+  // 11. Doors
+  // =====================================
+
+  for (let z = 12; z > corridorEnd + 8; z -= 12) {
+
+    // Left frame
+    box(
+      0.11, 2.4, 1.65,
+      trimMat, -3.88, 1.2, z
+    );
+
+    // Left door
+    box(
+      0.07, 2.25, 1.45,
+      doorMat, -3.81, 1.15, z
+    );
+
+    // Left handle
+    box(
+      0.08, 0.10, 0.08,
+      yellowMat, -3.72, 1.1, z
+    );
+
+    // Right frame
+    box(
+      0.11, 2.4, 1.65,
+      trimMat, 3.88, 1.2, z - 5
+    );
+
+    // Right door
+    box(
+      0.07, 2.25, 1.45,
+      doorMat, 3.81, 1.15, z - 5
+    );
+
+    // Right handle
+    box(
+      0.08, 0.10, 0.08,
+      yellowMat, 3.72, 1.1, z - 5
+    );
+  }
+
+  // =====================================
+  // 12. Posters
+  // =====================================
+
+  function createPosterTexture(title, subtitle) {
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 512;
+    canvas.height = 640;
+
+    const c = canvas.getContext("2d");
+
+    c.fillStyle = "#eee9dc";
+    c.fillRect(0, 0, 512, 640);
+
+    c.fillStyle = "#264b63";
+    c.fillRect(25, 25, 462, 90);
+
+    c.fillStyle = "#ffffff";
+    c.font = "bold 38px sans-serif";
+    c.fillText(title, 45, 82);
+
+    c.fillStyle = "#353535";
+    c.font = "bold 29px sans-serif";
+    c.fillText(subtitle, 40, 175);
+
+    c.fillStyle = "#c4d3d2";
+    c.fillRect(50, 220, 412, 240);
+
+    c.fillStyle = "#557d85";
+    c.fillRect(65, 235, 382, 210);
+
+    c.fillStyle = "#ffffff";
+    c.font = "26px sans-serif";
+    c.fillText("INFORMATION", 90, 520);
+
+    c.font = "19px sans-serif";
+    c.fillText("PLEASE CHECK THE NOTICE", 90, 555);
+
+    return new THREE.CanvasTexture(canvas);
+  }
+
+  const posterTexture1 = createPosterTexture(
+    "INFORMATION",
+    "お知らせ"
+  );
+
+  const posterTexture2 = createPosterTexture(
+    "NOTICE",
+    "ご案内"
+  );
+
+  function addPoster(x, y, z, texture, side) {
+
+    const frameMat = material(0x45484a);
+
+    box(
+      0.07,
+      1.3,
+      1.0,
+      frameMat,
+      x,
+      y,
+      z
+    );
+
+    const plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.88, 1.18),
+      new THREE.MeshBasicMaterial({
+        map: texture,
+        side: THREE.DoubleSide
+      })
+    );
+
+    plane.rotation.y = side === "left"
+      ? Math.PI / 2
+      : -Math.PI / 2;
+
+    plane.position.set(
+      x + (side === "left" ? 0.04 : -0.04),
+      y,
+      z
+    );
+
+    scene.add(plane);
+  }
+
+  for (let z = 7; z > corridorEnd + 6; z -= 16) {
+
+    addPoster(-3.78, 2.25, z, posterTexture1, "left");
+
+    addPoster(3.78, 2.25, z - 7, posterTexture2, "right");
+  }
+
+  // =====================================
+  // 13. Exit sign
+  // =====================================
+
+  const exitMat = new THREE.MeshStandardMaterial({
+    color: 0x23864c,
+    emissive: 0x14602f,
+    emissiveIntensity: 1.5
+  });
+
+  box(
+    1.5,
+    0.45,
+    0.08,
+    exitMat,
+    0,
+    2.9,
+    corridorEnd + 0.2
+  );
+
+  // =====================================
+  // 14. Player
+  // =====================================
+
+  let yaw = 0;
+  let pitch = 0;
+
+  let started = false;
+
+  const keys = {};
+
+  const playerSpeed = 4.0;
+  const playerRadius = 0.35;
+
+  // =====================================
+  // 15. Keyboard input
+  // =====================================
+
+  const movementKeys = [
+    "KeyW",
+    "KeyA",
+    "KeyS",
+    "KeyD"
+  ];
+
+  document.addEventListener("keydown", event => {
+
+    if (event.code === "Enter") {
+
+      event.preventDefault();
+
+      if (!event.repeat) {
+        startGame();
+      }
+
+      return;
+    }
+
+    if (movementKeys.includes(event.code)) {
+      event.preventDefault();
+      keys[event.code] = true;
+    }
+  });
+
+  document.addEventListener("keyup", event => {
+    keys[event.code] = false;
+  });
+
+  window.addEventListener("blur", () => {
+    clearKeys();
+  });
+
+  function clearKeys() {
+    for (const key of movementKeys) {
+      keys[key] = false;
+    }
+  }
+
+  // =====================================
+  // 16. Start with Enter + Pointer Lock
+  // =====================================
+
+  function startGame() {
+
+    if (document.pointerLockElement === renderer.domElement) {
+      return;
+    }
+
+    if (!renderer.domElement.requestPointerLock) {
+      description.textContent =
+        "このブラウザではマウスロックを利用できません。";
+      return;
+    }
+
+    description.textContent =
+      "マウスロックを要求しています...";
+
+    try {
+
+      // Call directly from the Enter key event.
+      // Do not put an await before this call.
+      const result =
+        renderer.domElement.requestPointerLock();
+
+      if (result && typeof result.catch === "function") {
+
+        result.catch(error => {
+          console.log("Pointer lock failed:", error);
+
+          description.textContent =
+            "マウスロックに失敗しました。Enterでもう一度試してください。";
+        });
+      }
+
+    } catch (error) {
+
+      console.log("Pointer lock error:", error);
+
+      description.textContent =
+        "マウスロックに失敗しました。Enterでもう一度試してください。";
+    }
+  }
+
+  document.addEventListener("pointerlockchange", () => {
+
+    const locked =
+      document.pointerLockElement === renderer.domElement;
+
+    started = locked;
+
+    overlay.style.display = locked ? "none" : "flex";
+
+    crosshair.style.display = locked ? "block" : "none";
+
+    clearKeys();
+
+    if (locked) {
+
+      description.textContent =
+        "どこまでも続く地下通路。";
+
+      enterText.textContent = "PRESS ENTER";
+
+    } else {
+
+      description.textContent =
+        "一時停止中。再開するにはEnterを押してください。";
+
+      enterText.textContent = "PRESS ENTER TO RESUME";
+    }
+  });
+
+  document.addEventListener("pointerlockerror", () => {
+
+    started = false;
+    overlay.style.display = "flex";
+
+    description.textContent =
+      "マウスロックに失敗しました。ページを確認してEnterを押してください。";
+  });
+
+  // =====================================
+  // 17. Mouse look
+  // =====================================
+
+  document.addEventListener("mousemove", event => {
+
+    if (!started) return;
+
+    yaw -= event.movementX * 0.002;
+    pitch -= event.movementY * 0.002;
+
+    pitch = Math.max(
+      -1.35,
+      Math.min(1.35, pitch)
+    );
+
+    camera.rotation.order = "YXZ";
+    camera.rotation.y = yaw;
+    camera.rotation.x = pitch;
+  });
+
+  // =====================================
+  // 18. Collision
+  // =====================================
+
+  function canMove(x, z) {
+
+    const insideWalls =
+      x > -4 + playerRadius &&
+      x < 4 - playerRadius;
+
+    const insideLength =
+      z > corridorEnd + playerRadius &&
+      z < corridorStart - playerRadius;
+
+    return insideWalls && insideLength;
+  }
+
+  // =====================================
+  // 19. Movement
+  // =====================================
+
+  function updateMovement(delta) {
+
+    let forward = 0;
+    let sideways = 0;
+
+    if (keys["KeyW"]) forward += 1;
+    if (keys["KeyS"]) forward -= 1;
+
+    if (keys["KeyD"]) sideways += 1;
+    if (keys["KeyA"]) sideways -= 1;
+
+    const length = Math.hypot(forward, sideways);
+
+    if (length > 0) {
+
+      forward /= length;
+      sideways /= length;
+    }
+
+    const speed = playerSpeed * delta;
+
+    // Forward / backward
+    const dx = -Math.sin(yaw) * forward * speed;
+    const dz = -Math.cos(yaw) * forward * speed;
+
+    // Left / right
+    const sideX = Math.cos(yaw) * sideways * speed;
+    const sideZ = -Math.sin(yaw) * sideways * speed;
+
+    const nextX =
+      camera.position.x + dx + sideX;
+
+    const nextZ =
+      camera.position.z + dz + sideZ;
+
+    // X collision
+    if (canMove(nextX, camera.position.z)) {
+      camera.position.x = nextX;
+    }
+
+    // Z collision
+    if (canMove(camera.position.x, nextZ)) {
+      camera.position.z = nextZ;
+    }
+
+    camera.rotation.order = "YXZ";
+    camera.rotation.y = yaw;
+    camera.rotation.x = pitch;
+  }
+
+  // =====================================
+  // 20. Animation
+  // =====================================
+
+  const clock = new THREE.Clock();
+
+  function animate() {
+
+    requestAnimationFrame(animate);
+
+    const delta = Math.min(
+      clock.getDelta(),
+      0.05
+    );
+
+    if (started) {
+      updateMovement(delta);
+    }
+
+    renderer.render(scene, camera);
+  }
+
+  animate();
+
+  // =====================================
+  // 21. Resize
+  // =====================================
+
+  window.addEventListener("resize", () => {
+
+    camera.aspect =
+      window.innerWidth / window.innerHeight;
+
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(
+      window.innerWidth,
+      window.innerHeight
+    );
+
+    renderer.setPixelRatio(
+      Math.min(window.devicePixelRatio || 1, 2)
+    );
+  });
+
+})();
+</script>
+
+</body>
+</html>
