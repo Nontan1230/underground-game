@@ -283,7 +283,7 @@ function repeatTexture(texture, x, y) {
 }
 
 const wallTexture = makeTexture(
-  12, 12, [204, 204, 198], "#858680", 123, 2
+  12, 12, [139, 140, 137], "#686a68", 456, 3
 );
 
 const floorTexture = makeTexture(
@@ -295,12 +295,12 @@ const ceilingTexture = makeTexture(
 );
 
 const wallMaterial = new THREE.MeshPhysicalMaterial({
-  map: repeatTexture(wallTexture, L / 0.2, H / 0.2),
-  color: 0xc9c9c3,
-  roughness: 0.38,
-  metalness: 0.025,
-  clearcoat: 0.35,
-  clearcoatRoughness: 0.28
+  map: repeatTexture(wallTexture, L / 0.6, H / 0.6),
+  color: 0xffffff,
+  roughness: 0.58,
+  metalness: 0.015,
+  clearcoat: 0.16,
+  clearcoatRoughness: 0.4
 });
 
 const floorMaterial = new THREE.MeshPhysicalMaterial({
@@ -466,10 +466,10 @@ box(
 );
 
 const leftWallMat = wallMaterial.clone();
-leftWallMat.map = repeatTexture(wallTexture, L / 0.2, H / 0.2);
+leftWallMat.map = repeatTexture(wallTexture, L / 0.6, H / 0.6);
 
 const rightWallMat = wallMaterial.clone();
-rightWallMat.map = repeatTexture(wallTexture, L / 0.2, H / 0.2);
+rightWallMat.map = repeatTexture(wallTexture, L / 0.6, H / 0.6);
 
 // 左右のタイル面は壁本体の内側に配置。
 plane(
