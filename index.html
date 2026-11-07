@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -155,14 +156,14 @@ WORLD.length = WORLD.start - WORLD.end;
 WORLD.center = (WORLD.start + WORLD.end) / 2;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x303235);
-scene.fog = new THREE.Fog(0x303235, 11, 43);
+scene.background = new THREE.Color(0x171a1d);
+scene.fog = new THREE.Fog(0x171a1d, 9, 38);
 
 const camera = new THREE.PerspectiveCamera(
   72,
   window.innerWidth / window.innerHeight,
-  0.3,
-  80
+  0.06,
+  90
 );
 camera.position.set(0, 1.62, 10);
 
@@ -174,8 +175,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.92;
-// Avoid shadow-map shimmer on the closely spaced wall surfaces.
+renderer.toneMappingExposure = 0.78;
 renderer.shadowMap.enabled = false;
 container.appendChild(renderer.domElement);
 
@@ -258,14 +258,21 @@ const wallTexture = makeTileTexture(5, 10, [211, 210, 203], "#96958f", 125, 2);
 const floorTexture = makeTileTexture(2, 2, [102, 105, 104], "#454849", 317, 4);
 const ceilingTexture = makeTileTexture(2, 2, [165, 165, 159], "#888983", 528, 3);
 
-const wallMat = new THREE.MeshStandardMaterial({
+const wallMat = new THREE.MeshPhysicalMaterial({
   map: repeated(wallTexture, L, H),
-  roughness: 0.88,
+  color: 0xc9c9c4,
+  roughness: 0.34,
+  metalness: 0.035,
+  clearcoat: 0.32,
+  clearcoatRoughness: 0.24,
   side: THREE.DoubleSide
 });
-const floorMat = new THREE.MeshStandardMaterial({
+const floorMat = new THREE.MeshPhysicalMaterial({
   map: repeated(floorTexture, W / 1.2, L / 1.2),
-  roughness: 0.92
+  roughness: 0.55,
+  metalness: 0.025,
+  clearcoat: 0.16,
+  clearcoatRoughness: 0.38
 });
 const ceilingMat = new THREE.MeshStandardMaterial({
   map: repeated(ceilingTexture, W / 2.4, L / 1.2),
@@ -299,7 +306,6 @@ function addPlane(width, height, material, x, y, z, rx = 0, ry = 0) {
   );
   mesh.position.set(x, y, z);
   mesh.rotation.set(rx, ry, 0);
-  // The wall planes are deliberately offset from the structural boxes.
   mesh.receiveShadow = false;
   scene.add(mesh);
   return mesh;
@@ -308,13 +314,13 @@ function addPlane(width, height, material, x, y, z, rx = 0, ry = 0) {
 // ==========================================
 // 4. LIGHTING
 // ==========================================
-scene.add(new THREE.AmbientLight(0xffffff, 0.25));
-scene.add(new THREE.HemisphereLight(0xdde3ee, 0x343438, 0.26));
+scene.add(new THREE.AmbientLight(0xcbd4df, 0.19));
+scene.add(new THREE.HemisphereLight(0xb9c8d8, 0x17191c, 0.20));
 
 const lampMaterial = new THREE.MeshStandardMaterial({
   color: 0xffffff,
   emissive: 0xdccfb7,
-  emissiveIntensity: 1.05,
+  emissiveIntensity: 0.82,
   roughness: 0.4
 });
 const lampLights = [];
@@ -324,7 +330,7 @@ function addCeilingLight(z) {
   addBox(0.27, 0.025, 2.15, metal, 0, H - 0.09, z);
   addBox(0.23, 0.018, 2.05, lampMaterial, 0, H - 0.11, z);
 
-  const light = new THREE.PointLight(0xffedda, 0.95, 11, 2);
+  const light = new THREE.PointLight(0xdce8ff, 0.68, 9, 2);
   light.position.set(0, H - 0.23, z);
   scene.add(light);
   lampLights.push(light);
@@ -337,14 +343,11 @@ for (let z = WORLD.start - 1; z > WORLD.end + 2; z -= 8) {
 // ==========================================
 // 5. CORRIDOR STRUCTURE
 // ==========================================
-// Floor and ceiling structural slabs.
 addBox(W, 0.22, L, simpleMaterial(0x505354), 0, -0.11, Z);
 addBox(W, 0.22, L, simpleMaterial(0x858680), 0, H + 0.11, Z);
 
-// Side walls. Their textured inner faces are offset slightly inward,
-// preventing coplanar surfaces and the wall flicker (Z-fighting).
-addBox(0.22, H, L, simpleMaterial(0xaaa9a3), -W / 2, H / 2, Z);
-addBox(0.22, H, L, simpleMaterial(0xaaa9a3), W / 2, H / 2, Z);
+addBox(0.22, H, L, simpleMaterial(0x55595b), -W / 2, H / 2, Z);
+addBox(0.22, H, L, simpleMaterial(0x55595b), W / 2, H / 2, Z);
 addBox(W, H, 0.22, simpleMaterial(0xaaa9a3), 0, H / 2, WORLD.end);
 
 addPlane(W, L, floorMat, 0, 0.006, Z, -Math.PI / 2);
@@ -364,7 +367,7 @@ for (const side of [-1, 1]) {
   addBox(0.025, 0.045, L, metal, side * (W / 2 - 0.15), H - 0.18, Z);
 }
 
-// Ceiling panel seams and a few maintenance panels.
+// Ceiling panel seams and maintenance panels.
 for (let z = WORLD.start - 0.6; z > WORLD.end; z -= 1.2) {
   addBox(W - 0.16, 0.012, 0.014, simpleMaterial(0x777873), 0, H - 0.018, z);
 }
@@ -561,7 +564,7 @@ function initAudio() {
     airGain.connect(audioMaster);
     air.start();
 
-    // Distant train-like low rumble, slowly swelling and fading.
+    // Distant train-like low rumble.
     const train = ctx.createBufferSource();
     train.buffer = noiseBuffer;
     train.loop = true;
@@ -583,7 +586,6 @@ function initAudio() {
     swellDepth.connect(trainGain.gain);
     swell.start();
 
-    // Low electrical / ventilation hum.
     const hum = ctx.createOscillator();
     const humGain = ctx.createGain();
     hum.type = "sine";
@@ -640,7 +642,7 @@ let pitch = 0;
 let started = false;
 const keys = {};
 const playerSpeed = 3.5;
-const playerRadius = 0.32;
+const playerRadius = 0.34;
 const movementKeys = [
   "KeyW", "KeyA", "KeyS", "KeyD", "ShiftLeft", "ShiftRight"
 ];
@@ -718,18 +720,20 @@ document.addEventListener("mousemove", event => {
 // ==========================================
 // 11. COLLISION AND MOVEMENT
 // ==========================================
-function canMove(x, z) {
-  return (
-    x > -W / 2 + playerRadius &&
-    x < W / 2 - playerRadius &&
-    z > WORLD.end + playerRadius &&
-    z < WORLD.start - playerRadius
-  );
-}
-
 const clock = new THREE.Clock();
 let walkingTime = 0;
 let footstepTimer = 0;
+const baseCameraHeight = 1.62;
+const innerWallX = W / 2 - 0.11;
+const safeMinX = -innerWallX + playerRadius;
+const safeMaxX = innerWallX - playerRadius;
+const safeMinZ = WORLD.end + 0.11 + playerRadius;
+const safeMaxZ = WORLD.start - 0.11 - playerRadius;
+
+function canMove(x, z) {
+  return x >= safeMinX && x <= safeMaxX &&
+         z >= safeMinZ && z <= safeMaxZ;
+}
 
 function updateMovement(delta) {
   let forward = 0;
@@ -747,31 +751,46 @@ function updateMovement(delta) {
 
   const running = Boolean(keys["ShiftLeft"] || keys["ShiftRight"]);
   const speed = playerSpeed * (running ? 1.7 : 1);
-  const step = speed * delta;
+  const totalStep = speed * delta;
+  const dx = -Math.sin(yaw) * forward * totalStep +
+              Math.cos(yaw) * sideways * totalStep;
+  const dz = -Math.cos(yaw) * forward * totalStep -
+              Math.sin(yaw) * sideways * totalStep;
+
   const oldX = camera.position.x;
   const oldZ = camera.position.z;
+  const distance = Math.hypot(dx, dz);
+  const steps = Math.max(1, Math.ceil(distance / 0.045));
+  const stepX = dx / steps;
+  const stepZ = dz / steps;
 
-  const dx = -Math.sin(yaw) * forward * step + Math.cos(yaw) * sideways * step;
-  const dz = -Math.cos(yaw) * forward * step - Math.sin(yaw) * sideways * step;
-  const nextX = camera.position.x + dx;
-  const nextZ = camera.position.z + dz;
+  for (let i = 0; i < steps; i++) {
+    const tryX = camera.position.x + stepX;
+    if (canMove(tryX, camera.position.z)) camera.position.x = tryX;
 
-  if (canMove(nextX, camera.position.z)) camera.position.x = nextX;
-  if (canMove(camera.position.x, nextZ)) camera.position.z = nextZ;
+    const tryZ = camera.position.z + stepZ;
+    if (canMove(camera.position.x, tryZ)) camera.position.z = tryZ;
+  }
+
+  camera.position.x = THREE.MathUtils.clamp(camera.position.x, safeMinX, safeMaxX);
+  camera.position.z = THREE.MathUtils.clamp(camera.position.z, safeMinZ, safeMaxZ);
 
   const moved = Math.hypot(camera.position.x - oldX, camera.position.z - oldZ) > 0.001;
   if (moved) {
     footstepTimer += delta;
     const interval = running ? 0.34 : 0.52;
     if (footstepTimer >= interval) {
-      footstepTimer -= interval;
+      footstepTimer %= interval;
       playFootstep(running);
     }
     walkingTime += delta * (running ? 12.5 : 8.5);
-    camera.position.y = 1.62 + Math.sin(walkingTime) * (running ? 0.028 : 0.014);
+    camera.position.y = baseCameraHeight +
+      Math.sin(walkingTime) * (running ? 0.028 : 0.014);
   } else {
     footstepTimer = 0;
-    camera.position.y = THREE.MathUtils.lerp(camera.position.y, 1.62, 0.12);
+    camera.position.y = THREE.MathUtils.lerp(
+      camera.position.y, baseCameraHeight, Math.min(1, delta * 10)
+    );
   }
 
   camera.rotation.order = "YXZ";
