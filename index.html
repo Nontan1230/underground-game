@@ -461,10 +461,10 @@ box(
 );
 
 const leftWallMat = wallMaterial.clone();
-leftWallMat.map = repeatTexture(wallTexture, L / 0.6, H / 0.6);
+leftWallMat.map = repeatTexture(wallTexture, L / 1, H / 1);
 
 const rightWallMat = wallMaterial.clone();
-rightWallMat.map = repeatTexture(wallTexture, L / 0.6, H / 0.6);
+rightWallMat.map = repeatTexture(wallTexture, L / 1, H / 1);
 
 // 左右のタイル面は壁本体の内側に配置。
 plane(
