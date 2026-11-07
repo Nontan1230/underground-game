@@ -12,7 +12,7 @@
 body {
   margin: 0;
   overflow: hidden;
-  background: #151719;
+  background: #17191b;
   color: white;
   font-family: Arial, sans-serif;
 }
@@ -22,17 +22,15 @@ body {
   inset: 0;
 }
 
-canvas {
-  display: block;
-}
+canvas { display: block; }
 
 #overlay {
   position: fixed;
   inset: 0;
   z-index: 5;
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   background: #0008;
 }
 
@@ -43,11 +41,9 @@ canvas {
   background: #171a20;
   border: 1px solid #ffffff33;
   border-radius: 10px;
-  box-shadow: 0 15px 60px #0008;
 }
 
 #panel h1 {
-  margin: 0 0 15px;
   font-size: 34px;
   letter-spacing: 5px;
 }
@@ -130,14 +126,12 @@ canvas {
       どこまでも続く地下通路。<br>
       周囲を観察しながら進もう。
     </p>
-
     <p>
       W : 前進<br>
       S : 後退<br>
       A / D : 左右移動<br>
       MOUSE : 視点移動
     </p>
-
     <div id="enterText">PRESS ENTER</div>
   </div>
 </div>
@@ -152,7 +146,7 @@ canvas {
 (() => {
 
 // ==========================================
-// 1. HTML
+// 1. BASIC
 // ==========================================
 
 const container = document.getElementById("game");
@@ -169,55 +163,40 @@ if (typeof THREE === "undefined") {
   return;
 }
 
-// ==========================================
-// 2. WORLD SETTINGS
-// ==========================================
-
 const WORLD = {
-  width: 8,
-  height: 3.5,
-  start: 24,
-  end: -76
+  width: 5.6,
+  height: 2.7,
+  start: 18,
+  end: -60
 };
 
 WORLD.length = WORLD.start - WORLD.end;
 WORLD.center = (WORLD.start + WORLD.end) / 2;
 
-// ==========================================
-// 3. THREE.JS
-// ==========================================
-
 const scene = new THREE.Scene();
 
 scene.background = new THREE.Color(0x777b7d);
-scene.fog = new THREE.Fog(0x777b7d, 22, 76);
+scene.fog = new THREE.Fog(0x777b7d, 20, 72);
 
 const camera = new THREE.PerspectiveCamera(
   72,
   window.innerWidth / window.innerHeight,
   0.1,
-  150
+  120
 );
 
-camera.position.set(0, 1.62, 18);
+camera.position.set(0, 1.62, 12);
 
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
   powerPreference: "high-performance"
 });
 
-renderer.setSize(
-  window.innerWidth,
-  window.innerHeight
-);
-
-renderer.setPixelRatio(
-  Math.min(window.devicePixelRatio || 1, 1.75)
-);
-
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.15;
+renderer.toneMappingExposure = 1.18;
 
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -225,7 +204,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 container.appendChild(renderer.domElement);
 
 // ==========================================
-// 4. RANDOM
+// 2. SEEDED RANDOM
 // ==========================================
 
 function randomGenerator(seed) {
@@ -238,29 +217,33 @@ function randomGenerator(seed) {
 }
 
 // ==========================================
-// 5. TEXTURE HELPERS
+// 3. TEXTURE HELPERS
 // ==========================================
 
-function canvasTexture(canvas, colorTexture = false) {
+function makeTexture(canvas, color = false) {
+
   const texture = new THREE.CanvasTexture(canvas);
 
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
+
   texture.anisotropy =
     renderer.capabilities.getMaxAnisotropy();
 
-  if (colorTexture) {
+  if (color) {
     texture.encoding = THREE.sRGBEncoding;
   }
 
   return texture;
 }
 
-function repeatedTexture(texture, x, y) {
+function repeatTexture(texture, x, y) {
+
   const result = texture.clone();
 
   result.wrapS = THREE.RepeatWrapping;
   result.wrapT = THREE.RepeatWrapping;
+
   result.repeat.set(x, y);
   result.needsUpdate = true;
 
@@ -268,33 +251,32 @@ function repeatedTexture(texture, x, y) {
 }
 
 // ==========================================
-// 6. NORMAL MAP GENERATOR
+// 4. NORMAL MAP
 // ==========================================
 
-function makeNormalMap(heightCanvas, strength = 2) {
+function createNormalMap(heightCanvas, strength = 2) {
 
-  const width = heightCanvas.width;
-  const height = heightCanvas.height;
+  const w = heightCanvas.width;
+  const h = heightCanvas.height;
 
   const source = heightCanvas.getContext("2d")
-    .getImageData(0, 0, width, height);
+    .getImageData(0, 0, w, h);
 
-  const output = document.createElement("canvas");
-  output.width = width;
-  output.height = height;
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
 
-  const ctx = output.getContext("2d");
-  const result = ctx.createImageData(width, height);
+  const ctx = canvas.getContext("2d");
+  const output = ctx.createImageData(w, h);
 
   function sample(x, y) {
-    x = (x + width) % width;
-    y = (y + height) % height;
-
-    return source.data[(y * width + x) * 4];
+    x = (x + w) % w;
+    y = (y + h) % h;
+    return source.data[(y * w + x) * 4];
   }
 
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
 
       const dx = (sample(x + 1, y) - sample(x - 1, y)) / 255;
       const dy = (sample(x, y + 1) - sample(x, y - 1)) / 255;
@@ -309,134 +291,139 @@ function makeNormalMap(heightCanvas, strength = 2) {
       ny /= len;
       nz /= len;
 
-      const i = (y * width + x) * 4;
+      const i = (y * w + x) * 4;
 
-      result.data[i] = (nx * .5 + .5) * 255;
-      result.data[i + 1] = (ny * .5 + .5) * 255;
-      result.data[i + 2] = (nz * .5 + .5) * 255;
-      result.data[i + 3] = 255;
+      output.data[i] = (nx * 0.5 + 0.5) * 255;
+      output.data[i + 1] = (ny * 0.5 + 0.5) * 255;
+      output.data[i + 2] = (nz * 0.5 + 0.5) * 255;
+      output.data[i + 3] = 255;
     }
   }
 
-  ctx.putImageData(result, 0, 0);
+  ctx.putImageData(output, 0, 0);
 
-  return canvasTexture(output);
+  return makeTexture(canvas);
 }
 
 // ==========================================
-// 7. TILE TEXTURE GENERATOR
+// 5. TILE MATERIAL GENERATOR
 // ==========================================
 
-function createTileSet(options) {
+function createTiles(config) {
 
   const size = 512;
-  const cols = options.cols;
-  const rows = options.rows;
 
-  const cellW = size / cols;
-  const cellH = size / rows;
+  const colorCanvas = document.createElement("canvas");
+  const heightCanvas = document.createElement("canvas");
+  const roughCanvas = document.createElement("canvas");
 
-  const color = document.createElement("canvas");
-  const height = document.createElement("canvas");
-  const rough = document.createElement("canvas");
+  colorCanvas.width = heightCanvas.width = roughCanvas.width = size;
+  colorCanvas.height = heightCanvas.height = roughCanvas.height = size;
 
-  color.width = height.width = rough.width = size;
-  color.height = height.height = rough.height = size;
+  const c = colorCanvas.getContext("2d");
+  const h = heightCanvas.getContext("2d");
+  const r = roughCanvas.getContext("2d");
 
-  const c = color.getContext("2d");
-  const h = height.getContext("2d");
-  const r = rough.getContext("2d");
+  const rand = randomGenerator(config.seed);
 
-  const rand = randomGenerator(options.seed);
+  const cellW = size / config.cols;
+  const cellH = size / config.rows;
+  const gap = config.gap;
 
-  c.fillStyle = options.grout;
+  c.fillStyle = config.grout;
   c.fillRect(0, 0, size, size);
 
-  h.fillStyle = "#444";
+  h.fillStyle = "#555555";
   h.fillRect(0, 0, size, size);
 
-  r.fillStyle = "#dddddd";
+  r.fillStyle = "#c0c0c0";
   r.fillRect(0, 0, size, size);
 
-  for (let y = 0; y < rows; y++) {
-    for (let x = 0; x < cols; x++) {
+  for (let row = 0; row < config.rows; row++) {
+    for (let col = 0; col < config.cols; col++) {
 
-      const px = x * cellW;
-      const py = y * cellH;
-
-      const gap = options.gap || 3;
+      const x = col * cellW;
+      const y = row * cellH;
 
       const w = cellW - gap * 2;
       const hh = cellH - gap * 2;
 
-      const variation = Math.floor(rand() * 11 - 5);
+      const variation = Math.floor(rand() * 10 - 5);
 
-      const red = options.base[0] + variation;
-      const green = options.base[1] + variation;
-      const blue = options.base[2] + variation;
+      const red = config.base[0] + variation;
+      const green = config.base[1] + variation;
+      const blue = config.base[2] + variation;
 
-      // Tile body
+      // Tile color
+
       c.fillStyle = `rgb(${red},${green},${blue})`;
-      c.fillRect(px + gap, py + gap, w, hh);
+      c.fillRect(x + gap, y + gap, w, hh);
 
-      // Surface shading
-      const g = c.createLinearGradient(
-        px, py, px + cellW, py + cellH
+      // Ceramic light reflection
+
+      const gradient = c.createLinearGradient(
+        x, y, x + cellW, y + cellH
       );
 
-      g.addColorStop(0, "#ffffff24");
-      g.addColorStop(.5, "#ffffff00");
-      g.addColorStop(1, "#00000020");
+      gradient.addColorStop(0, "#ffffff24");
+      gradient.addColorStop(0.5, "#ffffff00");
+      gradient.addColorStop(1, "#00000014");
 
-      c.fillStyle = g;
-      c.fillRect(px + gap, py + gap, w, hh);
+      c.fillStyle = gradient;
+      c.fillRect(x + gap, y + gap, w, hh);
 
-      // Subtle stains and grain
-      for (let i = 0; i < 70; i++) {
+      // Tiny surface variation
 
-        const sx = px + gap + rand() * w;
-        const sy = py + gap + rand() * hh;
+      for (let i = 0; i < 65; i++) {
 
-        c.fillStyle = rand() > .5
+        const px = x + gap + rand() * w;
+        const py = y + gap + rand() * hh;
+
+        c.fillStyle = rand() > 0.5
           ? "rgba(30,30,30,.035)"
-          : "rgba(255,255,255,.04)";
+          : "rgba(255,255,255,.05)";
 
-        c.fillRect(sx, sy, rand() * 2 + .3, 1);
+        c.fillRect(px, py, rand() * 1.5 + .3, 1);
       }
 
-      // Height information
-      h.fillStyle = "#484848";
-      h.fillRect(px, py, cellW, cellH);
+      // Height and bevel
 
-      h.fillStyle = "#999999";
-      h.fillRect(px + gap, py + gap, w, hh);
+      h.fillStyle = "#555555";
+      h.fillRect(x, y, cellW, cellH);
 
-      h.fillStyle = "#bbbbbb";
+      h.fillStyle = "#a0a0a0";
+      h.fillRect(x + gap, y + gap, w, hh);
+
+      h.fillStyle = "#c0c0c0";
       h.fillRect(
-        px + gap + 3,
-        py + gap + 3,
+        x + gap + 3,
+        y + gap + 3,
         w - 6,
         hh - 6
       );
 
       // Roughness
-      const rv = Math.floor(170 + rand() * 45);
+
+      const rv = Math.floor(
+        config.roughness + rand() * 35 - 17
+      );
 
       r.fillStyle = `rgb(${rv},${rv},${rv})`;
-      r.fillRect(px + gap, py + gap, w, hh);
+      r.fillRect(x + gap, y + gap, w, hh);
     }
   }
 
-  // Natural discoloration
-  if (options.stains) {
+  // Subtle stains
 
-    for (let i = 0; i < 350; i++) {
+  if (config.stains) {
+
+    for (let i = 0; i < 220; i++) {
 
       const x = rand() * size;
       const y = rand() * size;
-      const radius = rand() * 4 + .5;
+      const radius = rand() * 3 + .4;
 
-      c.fillStyle = `rgba(75,65,50,${rand() * .09})`;
+      c.fillStyle = `rgba(65,60,52,${rand() * .08})`;
 
       c.beginPath();
       c.arc(x, y, radius, 0, Math.PI * 2);
@@ -444,77 +431,88 @@ function createTileSet(options) {
     }
   }
 
-  const heightNormal = makeNormalMap(height, 2.2);
-
   return {
-    color: canvasTexture(color, true),
-    normal: heightNormal,
-    roughness: canvasTexture(rough)
+    color: makeTexture(colorCanvas, true),
+    normal: createNormalMap(heightCanvas, config.normalStrength || 2),
+    roughness: makeTexture(roughCanvas)
   };
 }
 
 // ==========================================
-// 8. MATERIAL SETS
+// 6. REALISTIC MATERIAL SETS
 // ==========================================
 
-// Wall: 30cm x 10cm tile modules.
-// 8 columns x 24 rows = 2.4m x 2.4m.
+// 1m x 1m texture area.
+// 5 columns x 10 rows.
+// Each wall tile = 20cm x 10cm.
 
-const wallTiles = createTileSet({
-  cols: 8,
-  rows: 24,
-  base: [215, 214, 207],
-  grout: "#aaa9a1",
+const wallTiles = createTiles({
+  cols: 5,
+  rows: 10,
   gap: 2,
-  seed: 124,
+  base: [218, 217, 210],
+  grout: "#a7a6a0",
+  seed: 125,
+  roughness: 185,
+  normalStrength: 2.4,
   stains: true
 });
 
-// Floor: 60cm square stone tiles.
+// 1.2m x 1.2m texture area.
+// 2 x 2 tiles.
+// Each floor tile = 60cm square.
 
-const floorTiles = createTileSet({
-  cols: 4,
-  rows: 4,
-  base: [115, 117, 116],
-  grout: "#55585a",
+const floorTiles = createTiles({
+  cols: 2,
+  rows: 2,
   gap: 4,
-  seed: 356,
+  base: [117, 119, 117],
+  grout: "#55585a",
+  seed: 317,
+  roughness: 205,
+  normalStrength: 2,
   stains: true
 });
 
-// Ceiling: 120cm x 60cm panels.
+// 2.4m x 1.2m texture area.
+// Ceiling panels = 1.2m x 60cm.
 
-const ceilingTiles = createTileSet({
-  cols: 4,
-  rows: 8,
-  base: [186, 185, 178],
-  grout: "#aaa9a1",
+const ceilingTiles = createTiles({
+  cols: 2,
+  rows: 2,
   gap: 3,
-  seed: 817,
+  base: [188, 187, 180],
+  grout: "#aaa9a3",
+  seed: 528,
+  roughness: 220,
+  normalStrength: 1.2,
   stains: false
 });
 
 // ==========================================
-// 9. MATERIALS
+// 7. MATERIALS
 // ==========================================
 
-function surfaceMaterial(set, roughness, scale) {
+function surfaceMaterial(set, roughness, normalStrength) {
 
   return new THREE.MeshStandardMaterial({
     map: set.color,
     normalMap: set.normal,
     roughnessMap: set.roughness,
-    normalScale: new THREE.Vector2(scale, scale),
+    normalScale: new THREE.Vector2(
+      normalStrength,
+      normalStrength
+    ),
     roughness,
     side: THREE.DoubleSide
   });
 }
 
-const wallMat = surfaceMaterial(wallTiles, .84, .55);
-const floorMat = surfaceMaterial(floorTiles, .72, .7);
-const ceilingMat = surfaceMaterial(ceilingTiles, .92, .45);
+const wallMat = surfaceMaterial(wallTiles, 0.78, 0.65);
+const floorMat = surfaceMaterial(floorTiles, 0.74, 0.7);
+const ceilingMat = surfaceMaterial(ceilingTiles, 0.92, 0.4);
 
-function standard(color, roughness = .8, metalness = 0) {
+function simpleMaterial(color, roughness = 0.8, metalness = 0) {
   return new THREE.MeshStandardMaterial({
     color,
     roughness,
@@ -522,67 +520,67 @@ function standard(color, roughness = .8, metalness = 0) {
   });
 }
 
-const darkMetal = standard(0x414548, .55, .35);
-const metal = standard(0x969998, .4, .5);
-const doorMat = standard(0x888b8a, .75);
-const black = standard(0x26292b, .8);
-const white = standard(0xe8e6df, .8);
-const yellow = standard(0xd3b43b, .85);
+const metalDark = simpleMaterial(0x45484a, 0.6, 0.35);
+const metal = simpleMaterial(0x939694, 0.4, 0.45);
+const doorMat = simpleMaterial(0x858887, 0.7);
+const black = simpleMaterial(0x25282a);
+const white = simpleMaterial(0xe8e6de);
+const yellow = simpleMaterial(0xd5b53b, 0.8);
 
-const lampMaterial = new THREE.MeshStandardMaterial({
+const lampMat = new THREE.MeshStandardMaterial({
   color: 0xffffff,
   emissive: 0xfff0d6,
-  emissiveIntensity: 2.1,
-  roughness: .35
+  emissiveIntensity: 2.4,
+  roughness: 0.35
 });
 
 // ==========================================
-// 10. LIGHTING
+// 8. LIGHTING
 // ==========================================
 
 scene.add(
-  new THREE.AmbientLight(0xffffff, .38)
+  new THREE.AmbientLight(0xffffff, 0.42)
 );
 
 scene.add(
   new THREE.HemisphereLight(
-    0xf2f3ff,
+    0xf3f4ff,
     0x55545a,
-    .48
+    0.42
   )
 );
 
-// Mild broad illumination and shadows.
+// A subtle directional light for soft shadows.
 
-const directional = new THREE.DirectionalLight(
-  0xffffff, .28
-);
+const sun = new THREE.DirectionalLight(0xffffff, 0.22);
 
-directional.position.set(-4, 8, 18);
-directional.target.position.set(0, 0, -15);
-directional.castShadow = true;
+sun.position.set(-4, 8, 14);
+sun.target.position.set(0, 0, -20);
 
-directional.shadow.mapSize.set(1024, 1024);
-directional.shadow.camera.left = -7;
-directional.shadow.camera.right = 7;
-directional.shadow.camera.top = 7;
-directional.shadow.camera.bottom = -4;
-directional.shadow.camera.near = .5;
-directional.shadow.camera.far = 38;
-directional.shadow.bias = -.0004;
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
 
-scene.add(directional);
-scene.add(directional.target);
+sun.shadow.camera.left = -4;
+sun.shadow.camera.right = 4;
+sun.shadow.camera.top = 4;
+sun.shadow.camera.bottom = -4;
+sun.shadow.camera.near = 0.1;
+sun.shadow.camera.far = 100;
+
+sun.shadow.bias = -0.0005;
+
+scene.add(sun);
+scene.add(sun.target);
 
 // ==========================================
-// 11. GEOMETRY HELPERS
+// 9. GEOMETRY HELPERS
 // ==========================================
 
-function box(w, h, d, mat, x, y, z, cast = false) {
+function box(w, h, d, material, x, y, z, cast = false) {
 
   const mesh = new THREE.Mesh(
     new THREE.BoxGeometry(w, h, d),
-    mat
+    material
   );
 
   mesh.position.set(x, y, z);
@@ -594,11 +592,11 @@ function box(w, h, d, mat, x, y, z, cast = false) {
   return mesh;
 }
 
-function plane(w, h, mat, x, y, z, rx = 0, ry = 0) {
+function makePlane(w, h, material, x, y, z, rx = 0, ry = 0) {
 
   const mesh = new THREE.Mesh(
     new THREE.PlaneGeometry(w, h),
-    mat
+    material
   );
 
   mesh.position.set(x, y, z);
@@ -610,11 +608,11 @@ function plane(w, h, mat, x, y, z, rx = 0, ry = 0) {
   return mesh;
 }
 
-function cylinder(radius, length, mat, x, y, z, rx = 0) {
+function cylinder(radius, length, material, x, y, z, rx = 0) {
 
   const mesh = new THREE.Mesh(
     new THREE.CylinderGeometry(radius, radius, length, 16),
-    mat
+    material
   );
 
   mesh.position.set(x, y, z);
@@ -627,76 +625,69 @@ function cylinder(radius, length, mat, x, y, z, rx = 0) {
 }
 
 // ==========================================
-// 12. CORRIDOR
+// 10. CORRIDOR STRUCTURE
 // ==========================================
 
 const W = WORLD.width;
 const H = WORLD.height;
 const L = WORLD.length;
-const CENTER = WORLD.center;
+const Z = WORLD.center;
 
-// Structural floor and ceiling.
+// Floor base
 
-box(W, .22, L, standard(0x65676a), 0, -.11, CENTER);
-box(W, .22, L, standard(0xb5b4ad), 0, H + .11, CENTER);
+box(W, 0.22, L, simpleMaterial(0x66686a), 0, -0.11, Z);
 
-// Structural walls.
+// Ceiling base
 
-box(.22, H, L, standard(0xcfcfc8), -4, H / 2, CENTER);
-box(.22, H, L, standard(0xcfcfc8), 4, H / 2, CENTER);
+box(W, 0.22, L, simpleMaterial(0xb8b7b0), 0, H + 0.11, Z);
 
-// End wall.
+// Wall bases
 
-box(W, H, .22, standard(0xcfcfc8), 0, H / 2, WORLD.end);
+box(0.22, H, L, simpleMaterial(0xd0cfc9), -W/2, H/2, Z);
+box(0.22, H, L, simpleMaterial(0xd0cfc9), W/2, H/2, Z);
 
-// Floor surface.
-// 60cm tile modules.
+// End wall
+
+box(W, H, 0.22, simpleMaterial(0xd0cfc9), 0, H/2, WORLD.end);
+
+// Floor texture, 60cm modules.
 
 const floorSurface = floorMat.clone();
 
-floorSurface.map = repeatedTexture(floorTiles.color, W / 2.4, L / 2.4);
-floorSurface.normalMap = repeatedTexture(floorTiles.normal, W / 2.4, L / 2.4);
-floorSurface.roughnessMap = repeatedTexture(floorTiles.roughness, W / 2.4, L / 2.4);
+floorSurface.map = repeatTexture(floorTiles.color, W/1.2, L/1.2);
+floorSurface.normalMap = repeatTexture(floorTiles.normal, W/1.2, L/1.2);
+floorSurface.roughnessMap = repeatTexture(floorTiles.roughness, W/1.2, L/1.2);
 
-plane(
+makePlane(
   W, L,
   floorSurface,
-  0, .006, CENTER,
-  -Math.PI / 2
+  0, 0.006, Z,
+  -Math.PI/2
 );
 
-// Ceiling surface.
-// 120cm x 60cm panels.
+// Ceiling texture, 1.2m x 60cm panels.
 
 const ceilingSurface = ceilingMat.clone();
 
-ceilingSurface.map = repeatedTexture(ceilingTiles.color, W / 4.8, L / 4.8);
-ceilingSurface.normalMap = repeatedTexture(ceilingTiles.normal, W / 4.8, L / 4.8);
-ceilingSurface.roughnessMap = repeatedTexture(ceilingTiles.roughness, W / 4.8, L / 4.8);
+ceilingSurface.map = repeatTexture(ceilingTiles.color, W/2.4, L/1.2);
+ceilingSurface.normalMap = repeatTexture(ceilingTiles.normal, W/2.4, L/1.2);
+ceilingSurface.roughnessMap = repeatTexture(ceilingTiles.roughness, W/2.4, L/1.2);
 
-plane(
+makePlane(
   W, L,
   ceilingSurface,
-  0, H - .005, CENTER,
-  Math.PI / 2
+  0, H - 0.006, Z,
+  Math.PI/2
 );
 
-// Walls.
-// 30cm x 10cm tile modules.
+// Wall textures.
+// Each 1m contains 5 columns x 10 rows.
 
 const leftWall = wallMat.clone();
 
-leftWall.map = repeatedTexture(
-  wallTiles.color, L / 2.4, H / 2.4
-);
-
-leftWall.normalMap = repeatedTexture(
-  wallTiles.normal, L / 2.4, H / 2.4
-);
-
-leftWall.roughnessMap = repeatedTexture(
-  wallTiles.roughness, L / 2.4, H / 2.4
-);
+leftWall.map = repeatTexture(wallTiles.color, L, H);
+leftWall.normalMap = repeatTexture(wallTiles.normal, L, H);
+leftWall.roughnessMap = repeatTexture(wallTiles.roughness, L, H);
 
 const rightWall = wallMat.clone();
 
@@ -704,22 +695,26 @@ rightWall.map = leftWall.map.clone();
 rightWall.normalMap = leftWall.normalMap.clone();
 rightWall.roughnessMap = leftWall.roughnessMap.clone();
 
-plane(
+makePlane(
   L, H,
   leftWall,
-  -3.89, H / 2, CENTER,
-  0, Math.PI / 2
+  -W/2 + 0.115,
+  H/2,
+  Z,
+  0, Math.PI/2
 );
 
-plane(
+makePlane(
   L, H,
   rightWall,
-  3.89, H / 2, CENTER,
-  0, -Math.PI / 2
+  W/2 - 0.115,
+  H/2,
+  Z,
+  0, -Math.PI/2
 );
 
 // ==========================================
-// 13. WALL DETAILS
+// 11. WALL FINISHES
 // ==========================================
 
 // Dark stone skirting.
@@ -727,379 +722,248 @@ plane(
 for (const side of [-1, 1]) {
 
   box(
-    .08, .18, L,
-    darkMetal,
-    side * 3.83, .10, CENTER
+    0.045, 0.16, L,
+    metalDark,
+    side * (W/2 - 0.09),
+    0.09,
+    Z
   );
 
   box(
-    .07, .035, L,
+    0.04, 0.025, L,
     metal,
-    side * 3.81, .22, CENTER
+    side * (W/2 - 0.085),
+    0.18,
+    Z
   );
 
-  // Upper metal trim.
+  // Thin top metal trim.
 
   box(
-    .07, .065, L,
+    0.025, 0.045, L,
     metal,
-    side * 3.84, 3.35, CENTER
-  );
-
-  // Ceiling border.
-
-  box(
-    .10, .08, L,
-    darkMetal,
-    side * 3.45, 3.39, CENTER
+    side * (W/2 - 0.11),
+    H - 0.16,
+    Z
   );
 }
 
 // ==========================================
-// 14. TACTILE PAVING
+// 12. CEILING PANELS
 // ==========================================
 
-// Actual directional paving has raised longitudinal bars.
-// One continuous path through the middle of the corridor.
+for (let z = WORLD.start - 0.6; z > WORLD.end; z -= 1.2) {
 
-function createTactileTexture() {
+  box(
+    W - 0.15, 0.012, 0.015,
+    simpleMaterial(0x9e9d97),
+    0, H - 0.017, z
+  );
+}
 
-  const w = 256;
-  const h = 160;
+// A few discreet service hatches.
+
+for (let z = 7; z > WORLD.end + 5; z -= 22) {
+
+  box(
+    0.85, 0.025, 0.85,
+    metalDark,
+    1.75, H - 0.018, z
+  );
+
+  box(
+    0.75, 0.014, 0.75,
+    simpleMaterial(0xb8b8b1),
+    1.75, H - 0.04, z
+  );
+}
+
+// ==========================================
+// 13. TACTILE PAVING
+// ==========================================
+
+// One continuous yellow path.
+// Four longitudinal raised ribs.
+
+function createTactileSet() {
 
   const color = document.createElement("canvas");
   const height = document.createElement("canvas");
 
-  color.width = height.width = w;
-  color.height = height.height = h;
+  color.width = height.width = 256;
+  color.height = height.height = 256;
 
   const c = color.getContext("2d");
-  const hc = height.getContext("2d");
+  const h = height.getContext("2d");
 
-  c.fillStyle = "#c69f25";
-  c.fillRect(0, 0, w, h);
+  c.fillStyle = "#c4a02c";
+  c.fillRect(0, 0, 256, 256);
 
-  hc.fillStyle = "#777777";
-  hc.fillRect(0, 0, w, h);
+  h.fillStyle = "#606060";
+  h.fillRect(0, 0, 256, 256);
 
-  for (let i = 0; i < 5; i++) {
+  const ribWidth = 37;
 
-    const x = 15 + i * 49;
+  for (let i = 0; i < 4; i++) {
 
-    const g = c.createLinearGradient(x - 9, 0, x + 9, 0);
+    const x = 17 + i * 60;
 
-    g.addColorStop(0, "#937723");
-    g.addColorStop(.3, "#e4c34a");
-    g.addColorStop(.7, "#dfbf44");
-    g.addColorStop(1, "#90721f");
+    const gradient = c.createLinearGradient(x - 8, 0, x + 8, 0);
 
-    c.fillStyle = g;
-    c.fillRect(x - 9, 0, 18, h);
+    gradient.addColorStop(0, "#8e7020");
+    gradient.addColorStop(0.3, "#e0c34a");
+    gradient.addColorStop(0.75, "#d7b53b");
+    gradient.addColorStop(1, "#967a26");
 
-    const hg = hc.createLinearGradient(x - 9, 0, x + 9, 0);
+    c.fillStyle = gradient;
+    c.fillRect(x - 8, 0, 16, 256);
 
-    hg.addColorStop(0, "#555");
-    hg.addColorStop(.3, "#dedede");
-    hg.addColorStop(.7, "#c8c8c8");
-    hg.addColorStop(1, "#555");
+    const hg = h.createLinearGradient(x - 8, 0, x + 8, 0);
 
-    hc.fillStyle = hg;
-    hc.fillRect(x - 9, 0, 18, h);
+    hg.addColorStop(0, "#555555");
+    hg.addColorStop(0.35, "#dddddd");
+    hg.addColorStop(0.7, "#c8c8c8");
+    hg.addColorStop(1, "#555555");
+
+    h.fillStyle = hg;
+    h.fillRect(x - 8, 0, 16, 256);
   }
 
-  // Tile joints.
+  // Tile joints every 60cm.
 
-  c.fillStyle = "#a18122";
-  c.fillRect(0, 3, w, 2);
-  c.fillRect(0, h - 5, w, 2);
+  c.fillStyle = "#987a27";
+  h.fillStyle = "#555555";
+
+  for (let y = 0; y < 256; y += 128) {
+    c.fillRect(0, y, 256, 2);
+    h.fillRect(0, y, 256, 2);
+  }
 
   return {
-    color: canvasTexture(color, true),
-    normal: makeNormalMap(height, 2.3)
+    map: makeTexture(color, true),
+    normal: createNormalMap(height, 2)
   };
 }
 
-const tactile = createTactileTexture();
+const tactile = createTactileSet();
 
-const tactileMat = new THREE.MeshStandardMaterial({
-  map: repeatedTexture(tactile.color, 1, L / .3),
-  normalMap: repeatedTexture(tactile.normal, 1, L / .3),
-  roughness: .9,
+const tactileMaterial = new THREE.MeshStandardMaterial({
+  map: repeatTexture(tactile.map, 1, L),
+  normalMap: repeatTexture(tactile.normal, 1, L),
+  normalScale: new THREE.Vector2(0.5, 0.5),
+  roughness: 0.9,
   side: THREE.DoubleSide
 });
 
-plane(
-  .48, L,
-  tactileMat,
-  0, .034, CENTER,
-  -Math.PI / 2
+makePlane(
+  0.38, L,
+  tactileMaterial,
+  0, 0.025, Z,
+  -Math.PI/2
 );
 
 // ==========================================
-// 15. CEILING PANELS AND VENTS
+// 14. FLUORESCENT LIGHTS
 // ==========================================
 
-// Longitudinal metal channels.
-
-for (const x of [-3.1, -2.7, 2.7, 3.1]) {
-
-  box(
-    .065, .065, L,
-    darkMetal,
-    x, 3.39, CENTER
-  );
-}
-
-// Access panels.
-
-for (let z = 15; z > WORLD.end + 5; z -= 18) {
-
-  box(
-    1.05, .035, 1.3,
-    metal,
-    -2.2, 3.39, z,
-    false
-  );
-
-  box(
-    .94, .012, 1.18,
-    standard(0xb2b2ad),
-    -2.2, 3.365, z
-  );
-
-  // Screws.
-
-  for (const x of [-2.65, -1.75]) {
-    for (const dz of [-.5, .5]) {
-      cylinder(
-        .018, .012,
-        darkMetal,
-        x, 3.35, z + dz,
-        Math.PI / 2
-      );
-    }
-  }
-}
-
-// Ventilation grills.
-
-for (let z = 10; z > WORLD.end + 8; z -= 24) {
-
-  box(
-    .85, .045, 1.1,
-    darkMetal,
-    2.3, 3.37, z
-  );
-
-  for (let i = 0; i < 8; i++) {
-
-    box(
-      .015, .018, .95,
-      metal,
-      1.92 + i * .11, 3.335, z
-    );
-  }
-}
-
-// ==========================================
-// 16. CEILING LIGHTS
-// ==========================================
-
-const lights = [];
-
-const glowCanvas = document.createElement("canvas");
-glowCanvas.width = glowCanvas.height = 128;
-
-const gc = glowCanvas.getContext("2d");
-
-const glowGradient = gc.createRadialGradient(
-  64, 64, 5,
-  64, 64, 64
-);
-
-glowGradient.addColorStop(0, "rgba(255,240,214,.22)");
-glowGradient.addColorStop(1, "rgba(255,240,214,0)");
-
-gc.fillStyle = glowGradient;
-gc.fillRect(0, 0, 128, 128);
-
-const glowTexture = canvasTexture(glowCanvas, true);
-
-const glowMat = new THREE.MeshBasicMaterial({
-  map: glowTexture,
-  transparent: true,
-  depthWrite: false,
-  side: THREE.DoubleSide
+const lightPanel = new THREE.MeshStandardMaterial({
+  color: 0xffffff,
+  emissive: 0xfff2df,
+  emissiveIntensity: 2.8,
+  roughness: 0.35
 });
 
-function addLight(z) {
+const ceilingLights = [];
 
-  // Recessed housing.
+function addCeilingLight(z) {
+
+  // Slim housing.
 
   box(
-    .30, .08, 3.1,
-    darkMetal,
-    0, 3.40, z
+    0.28, 0.065, 2.4,
+    metalDark,
+    0, H - 0.035, z
   );
 
-  // Metal frame.
+  // Reflector frame.
 
   box(
-    .25, .025, 2.95,
+    0.245, 0.025, 2.32,
     metal,
-    0, 3.34, z
+    0, H - 0.075, z
   );
 
   // Diffuser.
 
   box(
-    .20, .018, 2.83,
-    lampMaterial,
-    0, 3.315, z
+    0.21, 0.016, 2.22,
+    lightPanel,
+    0, H - 0.095, z
   );
 
-  // Glass/reflector cover.
+  // Tubes.
 
-  const cover = new THREE.Mesh(
-    new THREE.PlaneGeometry(.17, 2.78),
-    new THREE.MeshBasicMaterial({
-      color: 0xffffff,
-      side: THREE.DoubleSide
-    })
-  );
-
-  cover.rotation.x = Math.PI / 2;
-  cover.position.set(0, 3.302, z);
-
-  scene.add(cover);
-
-  // Actual lighting.
-
-  const light = new THREE.PointLight(
-    0xfff0db,
-    1.4,
-    17,
-    2
-  );
-
-  light.position.set(0, 3.0, z);
-  scene.add(light);
-
-  // Soft pool of light.
-
-  const glow = new THREE.Mesh(
-    new THREE.PlaneGeometry(6.8, 8),
-    glowMat
-  );
-
-  glow.rotation.x = -Math.PI / 2;
-  glow.position.set(0, .018, z);
-
-  scene.add(glow);
-
-  lights.push(light);
-}
-
-for (let z = 19; z > WORLD.end + 4; z -= 8.5) {
-  addLight(z);
-}
-
-// ==========================================
-// 17. METAL DOORS
-// ==========================================
-
-function addServiceDoor(side, z) {
-
-  const x = side * 3.81;
-
-  // Outer frame.
-
-  box(
-    .09, 2.48, 1.7,
-    darkMetal,
-    x, 1.26, z
-  );
-
-  // Door body.
-
-  box(
-    .055, 2.28, 1.53,
-    doorMat,
-    x - side * .065, 1.17, z
-  );
-
-  // Raised inner panel.
-
-  box(
-    .025, 1.85, 1.22,
-    metal,
-    x - side * .10, 1.2, z
-  );
-
-  // Main recessed panel.
-
-  box(
-    .018, 1.66, 1.04,
-    doorMat,
-    x - side * .116, 1.2, z
-  );
-
-  // Hinges.
-
-  for (const y of [.35, 1.8]) {
+  for (const x of [-0.055, 0.055]) {
     box(
-      .055, .16, .07,
-      darkMetal,
-      x - side * .1, y, z - .67
+      0.025, 0.012, 2.12,
+      white,
+      x, H - 0.105, z
     );
   }
 
-  // Handle plate.
+  // Light source.
 
-  box(
-    .025, .25, .12,
-    darkMetal,
-    x - side * .13, 1.12, z - .48
+  const light = new THREE.PointLight(
+    0xfff3df,
+    1.35,
+    13,
+    2
   );
 
-  // Handle.
+  light.position.set(0, H - 0.25, z);
 
-  box(
-    .035, .13, .06,
-    metal,
-    x - side * .15, 1.12, z - .48
-  );
-
-  // Label.
-
-  box(
-    .025, .22, .45,
-    white,
-    x - side * .13, 2.05, z
-  );
-
-  // Door threshold.
-
-  box(
-    .4, .05, 1.65,
-    metal,
-    x - side * .13, .026, z
-  );
+  scene.add(light);
+  ceilingLights.push(light);
 }
 
-for (let z = 11; z > WORLD.end + 8; z -= 17) {
-  addServiceDoor(-1, z);
-}
-
-for (let z = 4; z > WORLD.end + 8; z -= 17) {
-  addServiceDoor(1, z);
+for (let z = 14; z > WORLD.end + 3; z -= 7) {
+  addCeilingLight(z);
 }
 
 // ==========================================
-// 18. POSTER TEXTURES
+// 15. VENTILATION
 // ==========================================
 
-function createPoster(title, subtitle, color, seed) {
+function addVent(side, z) {
+
+  const x = side * (W/2 - 0.035);
+
+  box(
+    0.04, 0.48, 0.75,
+    metalDark,
+    x, 2.35, z
+  );
+
+  for (let i = 0; i < 7; i++) {
+
+    box(
+      0.025, 0.025, 0.64,
+      metal,
+      x - side * 0.03,
+      2.35 - 0.19 + i * 0.063,
+      z
+    );
+  }
+}
+
+addVent(-1, -19);
+addVent(1, -43);
+
+// ==========================================
+// 16. WALL POSTERS
+// ==========================================
+
+function posterTexture(title, subtitle, background) {
 
   const canvas = document.createElement("canvas");
   canvas.width = 512;
@@ -1107,84 +971,67 @@ function createPoster(title, subtitle, color, seed) {
 
   const c = canvas.getContext("2d");
 
-  const rand = randomGenerator(seed);
-
-  c.fillStyle = "#e9e7dc";
+  c.fillStyle = "#ede9dc";
   c.fillRect(0, 0, 512, 640);
 
-  c.fillStyle = color;
+  c.fillStyle = background;
   c.fillRect(0, 0, 512, 105);
 
   c.fillStyle = "#ffffff";
-  c.font = "bold 34px sans-serif";
-  c.fillText(title, 28, 69);
+  c.font = "bold 38px sans-serif";
+  c.fillText(title, 30, 70);
 
-  c.fillStyle = "#323635";
-  c.font = "bold 31px sans-serif";
+  c.fillStyle = "#343434";
+  c.font = "bold 30px sans-serif";
   c.fillText(subtitle, 32, 165);
 
-  // Illustration.
-
-  c.fillStyle = "#cbd3ce";
+  c.fillStyle = "#d3d4cc";
   c.fillRect(32, 195, 448, 250);
 
-  c.fillStyle = "#668d88";
-  c.fillRect(49, 210, 414, 220);
+  c.fillStyle = "#82938b";
+  c.fillRect(50, 213, 412, 214);
+
+  // Simple graphic.
 
   c.fillStyle = "#eee9dc";
-  c.fillRect(94, 260, 320, 125);
+  c.fillRect(120, 265, 275, 120);
 
-  c.fillStyle = "#607d79";
+  c.fillStyle = "#5c7472";
 
   for (let i = 0; i < 5; i++) {
-    c.fillRect(112 + i * 59, 275, 32, 80);
+    c.fillRect(140 + i * 48, 285, 23, 75);
   }
 
-  c.fillStyle = "#ffffff";
-  c.font = "bold 26px sans-serif";
+  c.fillStyle = "#363636";
+  c.font = "bold 25px sans-serif";
   c.fillText("INFORMATION", 32, 500);
 
-  c.fillStyle = "#555555";
-  c.font = "20px sans-serif";
-
+  c.font = "19px sans-serif";
   c.fillText("PLEASE CHECK THE NOTICE", 32, 540);
   c.fillText("THANK YOU FOR YOUR", 32, 575);
-  c.fillText("COOPERATION.", 32, 606);
+  c.fillText("COOPERATION.", 32, 605);
 
-  // Small print.
-
-  c.strokeStyle = "#888888";
-  c.lineWidth = 1;
-
-  for (let i = 0; i < 5; i++) {
-    const y = 616 + i * 4;
-    c.beginPath();
-    c.moveTo(20, y);
-    c.lineTo(300 + rand() * 180, y);
-    c.stroke();
-  }
-
-  return canvasTexture(canvas, true);
+  return makeTexture(canvas, true);
 }
 
-function addPoster(side, z, title, subtitle, color, seed) {
+function addPoster(side, z, title, subtitle, color) {
 
-  const x = side * 3.82;
+  const x = side * (W/2 - 0.045);
 
   // Frame.
 
   box(
-    .065, 1.38, 1.05,
-    darkMetal,
-    x, 2.15, z
+    0.045, 1.18, 0.86,
+    metalDark,
+    x, 1.85, z
   );
 
-  const texture = createPoster(
-    title, subtitle, color, seed
+  const texture = posterTexture(
+    title, subtitle, color
   );
 
   const poster = new THREE.Mesh(
-    new THREE.PlaneGeometry(.98, 1.29),
+    new THREE.PlaneGeometry(0.78, 1.10),
     new THREE.MeshBasicMaterial({
       map: texture,
       side: THREE.DoubleSide
@@ -1192,195 +1039,182 @@ function addPoster(side, z, title, subtitle, color, seed) {
   );
 
   poster.position.set(
-    x - side * .05,
-    2.15,
+    side * (W/2 - 0.09),
+    1.85,
     z
   );
 
   poster.rotation.y =
-    side < 0 ? Math.PI / 2 : -Math.PI / 2;
+    side < 0 ? Math.PI/2 : -Math.PI/2;
 
   scene.add(poster);
 }
 
-for (let z = 5; z > WORLD.end + 5; z -= 19) {
+// Posters are only placed in a small group.
 
-  addPoster(
-    -1,
-    z,
-    "INFORMATION",
-    "施設のご案内",
-    "#405e75",
-    z + 100
-  );
-
-  addPoster(
-    1,
-    z - 8,
-    "GUIDE",
-    "通路のご案内",
-    "#536d5b",
-    z + 200
-  );
-}
+addPoster(-1, 7, "INFORMATION", "施設のご案内", "#36576c");
+addPoster(-1, 5.8, "GUIDE", "地下通路のご案内", "#536a5a");
 
 // ==========================================
-// 19. DIRECTION SIGN
+// 17. SERVICE DOORS
 // ==========================================
 
-function signTexture(title, subtitle, bg) {
+function addServiceDoor(side, z) {
 
-  const canvas = document.createElement("canvas");
-  canvas.width = 512;
-  canvas.height = 192;
+  const x = side * (W/2 - 0.04);
 
-  const c = canvas.getContext("2d");
+  // Frame.
 
-  c.fillStyle = bg;
-  c.fillRect(0, 0, 512, 192);
-
-  c.fillStyle = "#ffffff";
-  c.font = "bold 58px sans-serif";
-  c.textAlign = "center";
-  c.fillText(title, 256, 83);
-
-  c.font = "28px sans-serif";
-  c.fillText(subtitle, 256, 143);
-
-  return canvasTexture(canvas, true);
-}
-
-// Hanging directional board.
-
-box(2.8, .48, .12, black, 0, 2.70, -18);
-
-// Suspension rods.
-
-for (const x of [-1.1, 1.1]) {
   box(
-    .035, .36, .035,
-    metal,
-    x, 2.96, -18
+    0.06, 2.12, 0.95,
+    metalDark,
+    x, 1.07, z
+  );
+
+  // Door body.
+
+  box(
+    0.035, 1.98, 0.82,
+    doorMat,
+    x - side * 0.045, 1.04, z
+  );
+
+  // Inner panel.
+
+  box(
+    0.018, 1.68, 0.65,
+    simpleMaterial(0x929493, 0.82),
+    x - side * 0.067, 1.04, z
+  );
+
+  // Handle plate.
+
+  box(
+    0.02, 0.22, 0.12,
+    metalDark,
+    x - side * 0.08, 1.08, z - 0.29
+  );
+
+  // Handle.
+
+  box(
+    0.025, 0.12, 0.045,
+    black,
+    x - side * 0.095, 1.08, z - 0.29
+  );
+
+  // Small identification plate.
+
+  box(
+    0.02, 0.15, 0.34,
+    white,
+    x - side * 0.08, 1.90, z
   );
 }
 
-// Two-sided graphics.
-
-const directionTexture = signTexture(
-  "↑  出口 A0・A1",
-  "EXIT / SUBWAY",
-  "#183d47"
-);
-
-for (const zSide of [-1, 1]) {
-
-  const face = new THREE.Mesh(
-    new THREE.PlaneGeometry(2.65, .38),
-    new THREE.MeshBasicMaterial({
-      map: directionTexture,
-      side: THREE.DoubleSide
-    })
-  );
-
-  face.position.set(0, 2.70, -18 + zSide * .066);
-
-  scene.add(face);
-}
+addServiceDoor(1, -11);
+addServiceDoor(-1, -34);
+addServiceDoor(1, -49);
 
 // ==========================================
-// 20. EMERGENCY EQUIPMENT
+// 18. EMERGENCY EQUIPMENT
 // ==========================================
 
 function addEmergencyCabinet(side, z) {
 
-  const x = side * 3.78;
+  const x = side * (W/2 - 0.055);
 
   box(
-    .12, .48, .58,
-    standard(0xb33d35, .7),
-    x, 1.35, z
+    0.12, 0.34, 0.42,
+    simpleMaterial(0xb34238),
+    x, 1.4, z
   );
 
   box(
-    .035, .31, .40,
+    0.025, 0.21, 0.27,
     white,
-    x - side * .08, 1.35, z
+    x - side * 0.065, 1.4, z
   );
 
   box(
-    .025, .08, .15,
-    standard(0x34794c),
-    x - side * .10, 1.35, z
+    0.02, 0.055, 0.13,
+    simpleMaterial(0x2f7948),
+    x - side * 0.085, 1.4, z
   );
 }
 
-addEmergencyCabinet(-1, -13);
-addEmergencyCabinet(1, -44);
+addEmergencyCabinet(-1, -17);
+addEmergencyCabinet(1, -39);
 
-// Fire extinguishers.
+// ==========================================
+// 19. EXIT SIGN
+// ==========================================
 
-function addExtinguisher(side, z) {
+function signTexture(text, subtitle, color) {
 
-  const x = side * 3.48;
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 160;
 
-  cylinder(
-    .13, .58,
-    standard(0xb7312a, .45),
-    x, .54, z
-  );
+  const c = canvas.getContext("2d");
 
-  cylinder(
-    .05, .10,
-    darkMetal,
-    x, .87, z
-  );
+  c.fillStyle = color;
+  c.fillRect(0, 0, 512, 160);
 
-  cylinder(
-    .02, .22,
-    black,
-    x + .13, .90, z,
-    Math.PI / 3
-  );
+  c.fillStyle = "#ffffff";
+  c.textAlign = "center";
+  c.font = "bold 65px sans-serif";
+  c.fillText(text, 256, 75);
 
-  box(
-    .025, .18, .14,
-    white,
-    x + .14, .55, z
-  );
+  c.font = "26px sans-serif";
+  c.fillText(subtitle, 256, 125);
 
-  cylinder(
-    .15, .04,
-    darkMetal,
-    x, .24, z
-  );
+  return makeTexture(canvas, true);
 }
 
-addExtinguisher(-1, 2);
-addExtinguisher(1, -30);
-
-// ==========================================
-// 21. EXIT SIGN
-// ==========================================
-
-const endSignTexture = signTexture(
-  "EXIT →",
-  "出口",
-  "#156d43"
+const signTexture = signTexture(
+  "EXIT  →",
+  "出口案内",
+  "#176b43"
 );
 
-const endSign = new THREE.Mesh(
-  new THREE.PlaneGeometry(1.8, .56),
+const exitSign = new THREE.Mesh(
+  new THREE.PlaneGeometry(1.35, 0.42),
   new THREE.MeshBasicMaterial({
-    map: endSignTexture,
+    map: signTexture,
     side: THREE.DoubleSide
   })
 );
 
-endSign.position.set(0, 2.85, WORLD.end + .13);
-scene.add(endSign);
+exitSign.position.set(0, 2.25, -24);
+scene.add(exitSign);
+
+// Small sign housing.
+
+box(
+  1.42, 0.47, 0.045,
+  metalDark,
+  0, 2.25, -24
+);
+
+// Reattach the visible sign in front of the housing.
+
+exitSign.position.z = -23.973;
 
 // ==========================================
-// 22. PLAYER
+// 20. FAR END
+// ==========================================
+
+// Neutral wall finish.
+
+box(
+  W, 0.12, 0.12,
+  metalDark,
+  0, 0.07, WORLD.end + 0.02
+);
+
+// ==========================================
+// 21. PLAYER INPUT
 // ==========================================
 
 let yaw = 0;
@@ -1390,48 +1224,40 @@ let started = false;
 const keys = {};
 
 const playerSpeed = 3.5;
-const radius = .35;
+const playerRadius = 0.32;
 
-const moveKeys = [
+const movementKeys = [
   "KeyW", "KeyA", "KeyS", "KeyD"
 ];
 
 function clearKeys() {
-  for (const key of moveKeys) {
-    keys[key] = false;
-  }
+  movementKeys.forEach(k => keys[k] = false);
 }
 
-// ==========================================
-// 23. KEYBOARD INPUT
-// ==========================================
+document.addEventListener("keydown", e => {
 
-document.addEventListener("keydown", event => {
+  if (e.code === "Enter") {
+    e.preventDefault();
 
-  if (event.code === "Enter") {
-    event.preventDefault();
-
-    if (!event.repeat) {
-      startGame();
-    }
+    if (!e.repeat) startGame();
 
     return;
   }
 
-  if (moveKeys.includes(event.code)) {
-    event.preventDefault();
-    keys[event.code] = true;
+  if (movementKeys.includes(e.code)) {
+    e.preventDefault();
+    keys[e.code] = true;
   }
 });
 
-document.addEventListener("keyup", event => {
-  keys[event.code] = false;
+document.addEventListener("keyup", e => {
+  keys[e.code] = false;
 });
 
 window.addEventListener("blur", clearKeys);
 
 // ==========================================
-// 24. START GAME
+// 22. POINTER LOCK
 // ==========================================
 
 function startGame() {
@@ -1446,6 +1272,7 @@ function startGame() {
       renderer.domElement.requestPointerLock();
 
     if (result && result.catch) {
+
       result.catch(error => {
         console.log(error);
 
@@ -1469,12 +1296,12 @@ document.addEventListener("pointerlockchange", () => {
     document.pointerLockElement === renderer.domElement;
 
   overlay.style.display = started ? "none" : "flex";
-
   crosshair.style.display = started ? "block" : "none";
 
   clearKeys();
 
   if (!started) {
+
     description.textContent =
       "一時停止中。Enterで再開できます。";
 
@@ -1483,25 +1310,23 @@ document.addEventListener("pointerlockchange", () => {
 });
 
 document.addEventListener("pointerlockerror", () => {
+
   description.textContent =
     "マウスロックに失敗しました。Enterでもう一度試してください。";
 });
 
 // ==========================================
-// 25. MOUSE LOOK
+// 23. MOUSE LOOK
 // ==========================================
 
-document.addEventListener("mousemove", event => {
+document.addEventListener("mousemove", e => {
 
   if (!started) return;
 
-  yaw -= event.movementX * .002;
-  pitch -= event.movementY * .002;
+  yaw -= e.movementX * 0.002;
+  pitch -= e.movementY * 0.002;
 
-  pitch = Math.max(
-    -1.35,
-    Math.min(1.35, pitch)
-  );
+  pitch = Math.max(-1.35, Math.min(1.35, pitch));
 
   camera.rotation.order = "YXZ";
   camera.rotation.y = yaw;
@@ -1509,21 +1334,21 @@ document.addEventListener("mousemove", event => {
 });
 
 // ==========================================
-// 26. COLLISION
+// 24. COLLISION
 // ==========================================
 
 function canMove(x, z) {
 
   return (
-    x > -4 + radius &&
-    x < 4 - radius &&
-    z > WORLD.end + radius &&
-    z < WORLD.start - radius
+    x > -W/2 + playerRadius &&
+    x < W/2 - playerRadius &&
+    z > WORLD.end + playerRadius &&
+    z < WORLD.start - playerRadius
   );
 }
 
 // ==========================================
-// 27. MOVEMENT
+// 25. MOVEMENT
 // ==========================================
 
 const clock = new THREE.Clock();
@@ -1535,10 +1360,11 @@ function updateMovement(delta) {
   let forward = 0;
   let sideways = 0;
 
-  if (keys["KeyW"]) forward += 1;
-  if (keys["KeyS"]) forward -= 1;
-  if (keys["KeyD"]) sideways += 1;
-  if (keys["KeyA"]) sideways -= 1;
+  if (keys["KeyW"]) forward++;
+  if (keys["KeyS"]) forward--;
+
+  if (keys["KeyD"]) sideways++;
+  if (keys["KeyA"]) sideways--;
 
   const len = Math.hypot(forward, sideways);
 
@@ -1557,32 +1383,32 @@ function updateMovement(delta) {
     -Math.cos(yaw) * forward * step -
     Math.sin(yaw) * sideways * step;
 
-  const nextX = camera.position.x + dx;
-  const nextZ = camera.position.z + dz;
+  const nx = camera.position.x + dx;
+  const nz = camera.position.z + dz;
 
-  if (canMove(nextX, camera.position.z)) {
-    camera.position.x = nextX;
+  if (canMove(nx, camera.position.z)) {
+    camera.position.x = nx;
   }
 
-  if (canMove(camera.position.x, nextZ)) {
-    camera.position.z = nextZ;
+  if (canMove(camera.position.x, nz)) {
+    camera.position.z = nz;
   }
 
-  // Subtle natural walking movement.
+  // Gentle walking bob.
 
   if (len > 0) {
 
-    walkingTime += delta * 9;
+    walkingTime += delta * 8.5;
 
     camera.position.y =
-      1.62 + Math.sin(walkingTime) * .016;
+      1.62 + Math.sin(walkingTime) * 0.014;
 
   } else {
 
     camera.position.y = THREE.MathUtils.lerp(
       camera.position.y,
       1.62,
-      .12
+      0.12
     );
   }
 
@@ -1592,14 +1418,14 @@ function updateMovement(delta) {
 }
 
 // ==========================================
-// 28. ANIMATION
+// 26. ANIMATION
 // ==========================================
 
 function animate() {
 
   requestAnimationFrame(animate);
 
-  const delta = Math.min(clock.getDelta(), .05);
+  const delta = Math.min(clock.getDelta(), 0.05);
 
   if (started) {
     updateMovement(delta);
@@ -1611,7 +1437,7 @@ function animate() {
 animate();
 
 // ==========================================
-// 29. RESIZE
+// 27. RESIZE
 // ==========================================
 
 window.addEventListener("resize", () => {
@@ -1627,7 +1453,7 @@ window.addEventListener("resize", () => {
   );
 
   renderer.setPixelRatio(
-    Math.min(window.devicePixelRatio || 1, 1.75)
+    Math.min(window.devicePixelRatio || 1, 1.5)
   );
 });
 
