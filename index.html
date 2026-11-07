@@ -422,12 +422,7 @@ box(
   0, -0.1, Z
 );
 
-plane(
-  0.55, L,
-  tactileMaterial,
-  -0.25, 0.025, Z,
-  -Math.PI / 2
-);
+
 
 // 天井
 box(
@@ -586,7 +581,7 @@ const tactileMaterial = new THREE.MeshStandardMaterial({
 plane(
   0.55, L,
   tactileMaterial,
-  0, 0.025, Z,
+  -0.25, 0.025, Z,
   -Math.PI / 2
 );
 
