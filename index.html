@@ -148,8 +148,8 @@ if (typeof THREE === "undefined") {
 
 // 単位：メートル
 const WORLD = {
-  width: 4.5,
-  height: 3.0,
+  width: 4.8,
+  height: 3.2,
   start: 16,
   end: -24
 };
@@ -423,9 +423,9 @@ box(
 );
 
 plane(
-  W, L,
-  floorMaterial,
-  0, 0.012, Z,
+  0.55, L,
+  tactileMaterial,
+  -0.25, 0.025, Z,
   -Math.PI / 2
 );
 
