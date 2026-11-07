@@ -3,41 +3,41 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>UNDERGROUND</title>
 <style>
 * { box-sizing: border-box; }
 html, body {
+  margin: 0;
   width: 100%;
   height: 100%;
-  margin: 0;
   overflow: hidden;
-  background: #17191b;
-  color: #fff;
-  font-family: Arial, "Noto Sans JP", sans-serif;
+  background: #17191c;
+  color: white;
+  font-family: Arial, sans-serif;
 }
 #game { position: fixed; inset: 0; }
 canvas { display: block; }
 #hud {
   position: fixed;
-  z-index: 2;
   top: 18px;
   left: 20px;
-  color: #ffffffc9;
-  font-size: 13px;
+  z-index: 2;
+  font-size: 14px;
   line-height: 1.8;
+  color: #eee;
   text-shadow: 0 1px 5px #000;
   pointer-events: none;
 }
 #crosshair {
   position: fixed;
   z-index: 3;
-  left: 50%;
   top: 50%;
+  left: 50%;
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #fff;
+  background: white;
   transform: translate(-50%, -50%);
   display: none;
   pointer-events: none;
@@ -52,18 +52,16 @@ canvas { display: block; }
   background: #0009;
 }
 #panel {
-  width: min(90%, 440px);
-  padding: 34px 28px;
+  width: min(90%, 430px);
+  padding: 32px;
   text-align: center;
-  background: #171a20;
-  border: 1px solid #ffffff33;
-  border-radius: 10px;
-  box-shadow: 0 15px 60px #0008;
+  background: #191d21;
+  border: 1px solid #ffffff35;
+  border-radius: 8px;
 }
 #panel h1 {
-  margin: 0 0 18px;
-  font-size: 34px;
   letter-spacing: 5px;
+  font-size: 32px;
 }
 #panel p {
   color: #bbb;
@@ -72,13 +70,14 @@ canvas { display: block; }
 }
 #enterText {
   margin-top: 24px;
-  padding: 13px;
+  padding: 12px;
   border: 1px solid #ffffff55;
-  border-radius: 5px;
   letter-spacing: 3px;
   animation: pulse 1.5s infinite;
 }
-@keyframes pulse { 50% { opacity: .4; } }
+@keyframes pulse {
+  50% { opacity: .4; }
+}
 #error {
   display: none;
   position: fixed;
@@ -86,14 +85,15 @@ canvas { display: block; }
   z-index: 10;
   align-items: center;
   justify-content: center;
-  background: #171a20;
-  color: #ffaaaa;
+  background: #17191c;
   padding: 25px;
   text-align: center;
+  color: #ffaaaa;
 }
 </style>
 </head>
 <body>
+
 <div id="game"></div>
 
 <div id="hud">
@@ -101,12 +101,13 @@ canvas { display: block; }
   WASD : MOVE<br>
   SHIFT : RUN
 </div>
+
 <div id="crosshair"></div>
 
 <div id="overlay">
   <div id="panel">
     <h1>UNDERGROUND</h1>
-    <p id="description">
+    <p>
       地下鉄の通路を進もう。<br>
       周囲を観察しながら進んでください。
     </p>
@@ -124,17 +125,17 @@ canvas { display: block; }
 <div id="error"><div id="errorText"></div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
 <script>
 (() => {
 "use strict";
 
 // ==========================================
-// 1. BASIC SETTINGS
+// 1. 基本設定
 // ==========================================
+
 const container = document.getElementById("game");
 const overlay = document.getElementById("overlay");
-const description = document.getElementById("description");
-const enterText = document.getElementById("enterText");
 const crosshair = document.getElementById("crosshair");
 const errorScreen = document.getElementById("error");
 const errorText = document.getElementById("errorText");
@@ -145,39 +146,16 @@ if (typeof THREE === "undefined") {
   return;
 }
 
-// Corridor dimensions (meters)
+// 単位：メートル
 const WORLD = {
   width: 4.5,
-  height: 3.5,
-  start: 14,
-  end: -26
+  height: 3.0,
+  start: 16,
+  end: -24
 };
+
 WORLD.length = WORLD.start - WORLD.end;
 WORLD.center = (WORLD.start + WORLD.end) / 2;
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x171a1d);
-scene.fog = new THREE.Fog(0x171a1d, 9, 38);
-
-const camera = new THREE.PerspectiveCamera(
-  72,
-  window.innerWidth / window.innerHeight,
-  0.06,
-  90
-);
-camera.position.set(0, 1.62, 10);
-
-const renderer = new THREE.WebGLRenderer({
-  antialias: true,
-  powerPreference: "high-performance"
-});
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
-renderer.outputEncoding = THREE.sRGBEncoding;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.78;
-renderer.shadowMap.enabled = false;
-container.appendChild(renderer.domElement);
 
 const W = WORLD.width;
 const H = WORLD.height;
@@ -185,18 +163,117 @@ const L = WORLD.length;
 const Z = WORLD.center;
 
 // ==========================================
-// 2. TEXTURE HELPERS
+// 2. シーン・カメラ
 // ==========================================
-function makeCanvasTexture(canvas, isColor = true) {
+
+const scene = new THREE.Scene();
+
+scene.background = new THREE.Color(0x292c30);
+scene.fog = new THREE.Fog(0x292c30, 10, 38);
+
+const camera = new THREE.PerspectiveCamera(
+  72,
+  window.innerWidth / window.innerHeight,
+  0.08,
+  80
+);
+
+const BASE_HEIGHT = 1.62;
+
+camera.position.set(0, BASE_HEIGHT, 12);
+camera.rotation.order = "YXZ";
+
+const renderer = new THREE.WebGLRenderer({
+  antialias: true,
+  powerPreference: "high-performance"
+});
+
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(
+  Math.min(window.devicePixelRatio || 1, 1.5)
+);
+
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.88;
+renderer.shadowMap.enabled = false;
+
+container.appendChild(renderer.domElement);
+
+// ==========================================
+// 3. マテリアル・テクスチャ
+// ==========================================
+
+function makeTexture(cols, rows, base, grout, seed, gap) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 512;
+
+  const ctx = canvas.getContext("2d");
+
+  let state = seed >>> 0;
+
+  function random() {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 4294967296;
+  }
+
+  ctx.fillStyle = grout;
+  ctx.fillRect(0, 0, 512, 512);
+
+  const cw = 512 / cols;
+  const ch = 512 / rows;
+
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const variation = Math.floor(random() * 9 - 4);
+
+      const r = Math.max(0, Math.min(255, base[0] + variation));
+      const g = Math.max(0, Math.min(255, base[1] + variation));
+      const b = Math.max(0, Math.min(255, base[2] + variation));
+
+      const px = x * cw;
+      const py = y * ch;
+
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(
+        px + gap,
+        py + gap,
+        cw - gap * 2,
+        ch - gap * 2
+      );
+
+      const shine = ctx.createLinearGradient(
+        px, py, px + cw, py + ch
+      );
+
+      shine.addColorStop(0, "#ffffff20");
+      shine.addColorStop(0.5, "#ffffff00");
+      shine.addColorStop(1, "#00000012");
+
+      ctx.fillStyle = shine;
+      ctx.fillRect(
+        px + gap,
+        py + gap,
+        cw - gap * 2,
+        ch - gap * 2
+      );
+    }
+  }
+
   const texture = new THREE.CanvasTexture(canvas);
   texture.wrapS = THREE.RepeatWrapping;
   texture.wrapT = THREE.RepeatWrapping;
-  texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-  if (isColor) texture.encoding = THREE.sRGBEncoding;
+  texture.anisotropy = Math.min(
+    8,
+    renderer.capabilities.getMaxAnisotropy()
+  );
+  texture.encoding = THREE.sRGBEncoding;
+
   return texture;
 }
 
-function repeated(texture, x, y) {
+function repeatTexture(texture, x, y) {
   const copy = texture.clone();
   copy.wrapS = THREE.RepeatWrapping;
   copy.wrapT = THREE.RepeatWrapping;
@@ -205,392 +282,583 @@ function repeated(texture, x, y) {
   return copy;
 }
 
-function makeTileTexture(cols, rows, baseColor, groutColor, seed = 1, gap = 3) {
-  const size = 512;
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  let randomState = seed >>> 0;
-  const rand = () => {
-    randomState = (randomState * 1664525 + 1013904223) >>> 0;
-    return randomState / 4294967296;
-  };
-  ctx.fillStyle = groutColor;
-  ctx.fillRect(0, 0, size, size);
-  const cellW = size / cols;
-  const cellH = size / rows;
+const wallTexture = makeTexture(
+  12, 12, [204, 204, 198], "#858680", 123, 2
+);
 
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-      const x = col * cellW;
-      const y = row * cellH;
-      const v = Math.floor(rand() * 9 - 4);
-      const rgb = baseColor.map(n => Math.max(0, Math.min(255, n + v)));
-      ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-      ctx.fillRect(x + gap, y + gap, cellW - gap * 2, cellH - gap * 2);
+const floorTexture = makeTexture(
+  4, 4, [139, 140, 137], "#686a68", 456, 3
+);
 
-      const shine = ctx.createLinearGradient(x, y, x + cellW, y + cellH);
-      shine.addColorStop(0, "#ffffff25");
-      shine.addColorStop(0.5, "#ffffff00");
-      shine.addColorStop(1, "#00000019");
-      ctx.fillStyle = shine;
-      ctx.fillRect(x + gap, y + gap, cellW - gap * 2, cellH - gap * 2);
+const ceilingTexture = makeTexture(
+  2, 2, [139, 140, 136], "#777975", 789, 3
+);
 
-      for (let i = 0; i < 32; i++) {
-        ctx.fillStyle = rand() > 0.5 ? "#ffffff0c" : "#0000000a";
-        ctx.fillRect(
-          x + gap + rand() * (cellW - gap * 2),
-          y + gap + rand() * (cellH - gap * 2),
-          1 + rand() * 2,
-          1
-        );
-      }
-    }
-  }
-  return makeCanvasTexture(canvas, true);
-}
-
-function simpleMaterial(color, roughness = 0.82, metalness = 0) {
-  return new THREE.MeshStandardMaterial({ color, roughness, metalness });
-}
-
-const wallTexture = makeTileTexture(5, 10, [211, 210, 203], "#96958f", 125, 2);
-const floorTexture = makeTileTexture(2, 2, [102, 105, 104], "#454849", 317, 4);
-const ceilingTexture = makeTileTexture(2, 2, [165, 165, 159], "#888983", 528, 3);
-
-const wallMat = new THREE.MeshPhysicalMaterial({
-  map: repeated(wallTexture, L, H),
-  color: 0xc9c9c4,
-  roughness: 0.34,
-  metalness: 0.035,
-  clearcoat: 0.32,
-  clearcoatRoughness: 0.24,
-  side: THREE.DoubleSide
-});
-const floorMat = new THREE.MeshPhysicalMaterial({
-  map: repeated(floorTexture, W / 1.2, L / 1.2),
-  roughness: 0.55,
+const wallMaterial = new THREE.MeshPhysicalMaterial({
+  map: repeatTexture(wallTexture, L / 0.2, H / 0.2),
+  color: 0xc9c9c3,
+  roughness: 0.38,
   metalness: 0.025,
+  clearcoat: 0.35,
+  clearcoatRoughness: 0.28
+});
+
+const floorMaterial = new THREE.MeshPhysicalMaterial({
+  map: repeatTexture(floorTexture, W / 0.6, L / 0.6),
+  roughness: 0.58,
+  metalness: 0.015,
   clearcoat: 0.16,
-  clearcoatRoughness: 0.38
-});
-const ceilingMat = new THREE.MeshStandardMaterial({
-  map: repeated(ceilingTexture, W / 2.4, L / 1.2),
-  roughness: 0.96,
-  side: THREE.DoubleSide
+  clearcoatRoughness: 0.4
 });
 
-const metalDark = simpleMaterial(0x363a3c, 0.65, 0.25);
-const metal = simpleMaterial(0x777b7a, 0.5, 0.35);
-const doorMat = simpleMaterial(0x777b79, 0.8);
-const black = simpleMaterial(0x202325, 0.8);
-const white = simpleMaterial(0xd8d7cf, 0.75);
+const ceilingMaterial = new THREE.MeshStandardMaterial({
+  map: repeatTexture(ceilingTexture, W / 1.2, L / 1.2),
+  roughness: 0.95
+});
+
+const darkMetal = new THREE.MeshStandardMaterial({
+  color: 0x45494a,
+  roughness: 0.65,
+  metalness: 0.2
+});
+
+const lightMetal = new THREE.MeshStandardMaterial({
+  color: 0x858986,
+  roughness: 0.5,
+  metalness: 0.25
+});
+
+const whiteMaterial = new THREE.MeshStandardMaterial({
+  color: 0xd2d1c9,
+  roughness: 0.8
+});
 
 // ==========================================
-// 3. GEOMETRY HELPERS
+// 4. ジオメトリ補助
 // ==========================================
-function addBox(width, height, depth, material, x, y, z) {
+
+function box(w, h, d, material, x, y, z) {
   const mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(width, height, depth),
+    new THREE.BoxGeometry(w, h, d),
     material
   );
+
   mesh.position.set(x, y, z);
   scene.add(mesh);
   return mesh;
 }
 
-function addPlane(width, height, material, x, y, z, rx = 0, ry = 0) {
+function plane(w, h, material, x, y, z, rx, ry) {
   const mesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(width, height),
+    new THREE.PlaneGeometry(w, h),
     material
   );
+
   mesh.position.set(x, y, z);
-  mesh.rotation.set(rx, ry, 0);
-  mesh.receiveShadow = false;
+  mesh.rotation.set(rx || 0, ry || 0, 0);
   scene.add(mesh);
   return mesh;
 }
 
 // ==========================================
-// 4. LIGHTING
+// 5. 照明
 // ==========================================
-scene.add(new THREE.AmbientLight(0xcbd4df, 0.19));
-scene.add(new THREE.HemisphereLight(0xb9c8d8, 0x17191c, 0.20));
+
+scene.add(new THREE.AmbientLight(0xc8d2df, 0.24));
+
+scene.add(
+  new THREE.HemisphereLight(
+    0xb9c6d4,
+    0x222326,
+    0.23
+  )
+);
 
 const lampMaterial = new THREE.MeshStandardMaterial({
   color: 0xffffff,
-  emissive: 0xdccfb7,
-  emissiveIntensity: 0.82,
-  roughness: 0.4
+  emissive: 0xe1dfd5,
+  emissiveIntensity: 1.1,
+  roughness: 0.5
 });
-const lampLights = [];
 
-function addCeilingLight(z) {
-  addBox(0.32, 0.07, 2.25, metalDark, 0, H - 0.045, z);
-  addBox(0.27, 0.025, 2.15, metal, 0, H - 0.09, z);
-  addBox(0.23, 0.018, 2.05, lampMaterial, 0, H - 0.11, z);
+function addLamp(z) {
+  box(
+    0.34, 0.055, 2.0,
+    darkMetal, 0, H - 0.035, z
+  );
 
-  const light = new THREE.PointLight(0xdce8ff, 0.68, 9, 2);
-  light.position.set(0, H - 0.23, z);
+  box(
+    0.26, 0.025, 1.88,
+    lampMaterial, 0, H - 0.075, z
+  );
+
+  const light = new THREE.PointLight(
+    0xdde8ff, 0.75, 9, 2
+  );
+
+  light.position.set(0, H - 0.2, z);
   scene.add(light);
-  lampLights.push(light);
 }
 
-for (let z = WORLD.start - 1; z > WORLD.end + 2; z -= 8) {
-  addCeilingLight(z);
+for (
+  let z = WORLD.start - 2;
+  z > WORLD.end + 1;
+  z -= 7
+) {
+  addLamp(z);
 }
 
 // ==========================================
-// 5. CORRIDOR STRUCTURE
+// 6. 床・壁・天井
 // ==========================================
-addBox(W, 0.22, L, simpleMaterial(0x505354), 0, -0.11, Z);
-addBox(W, 0.22, L, simpleMaterial(0x858680), 0, H + 0.11, Z);
 
-addBox(0.22, H, L, simpleMaterial(0x55595b), -W / 2, H / 2, Z);
-addBox(0.22, H, L, simpleMaterial(0x55595b), W / 2, H / 2, Z);
-addBox(W, H, 0.22, simpleMaterial(0xaaa9a3), 0, H / 2, WORLD.end);
+// 床
+box(
+  W, 0.2, L,
+  new THREE.MeshStandardMaterial({
+    color: 0x777977,
+    roughness: 0.9
+  }),
+  0, -0.1, Z
+);
 
-addPlane(W, L, floorMat, 0, 0.006, Z, -Math.PI / 2);
-addPlane(W, L, ceilingMat, 0, H - 0.006, Z, Math.PI / 2);
+plane(
+  W, L,
+  floorMaterial,
+  0, 0.012, Z,
+  -Math.PI / 2
+);
 
-const wallLeft = wallMat.clone();
-const wallRight = wallMat.clone();
-wallLeft.map = repeated(wallTexture, L, H);
-wallRight.map = repeated(wallTexture, L, H);
-addPlane(L, H, wallLeft, -W / 2 + 0.118, H / 2, Z, 0, Math.PI / 2);
-addPlane(L, H, wallRight, W / 2 - 0.118, H / 2, Z, 0, -Math.PI / 2);
+// 天井
+box(
+  W, 0.2, L,
+  new THREE.MeshStandardMaterial({
+    color: 0x777975,
+    roughness: 0.95
+  }),
+  0, H + 0.1, Z
+);
 
-// Wall skirting and narrow upper trim.
+plane(
+  W, L,
+  ceilingMaterial,
+  0, H - 0.012, Z,
+  Math.PI / 2
+);
+
+// 壁本体
+const WALL_THICKNESS = 0.18;
+const WALL_CENTER = W / 2 - WALL_THICKNESS / 2;
+const WALL_FACE = W / 2 - WALL_THICKNESS;
+
+// 壁は箱で作り、内側のタイル面を少し通路側へ出す。
+// 壁本体とタイル面を重ねすぎないようにする。
+box(
+  WALL_THICKNESS, H, L,
+  darkMetal,
+  -WALL_CENTER, H / 2, Z
+);
+
+box(
+  WALL_THICKNESS, H, L,
+  darkMetal,
+  WALL_CENTER, H / 2, Z
+);
+
+const leftWallMat = wallMaterial.clone();
+leftWallMat.map = repeatTexture(wallTexture, L / 0.2, H / 0.2);
+
+const rightWallMat = wallMaterial.clone();
+rightWallMat.map = repeatTexture(wallTexture, L / 0.2, H / 0.2);
+
+// 左右のタイル面は壁本体の内側に配置。
+plane(
+  L, H,
+  leftWallMat,
+  -WALL_FACE + 0.012,
+  H / 2,
+  Z,
+  0, Math.PI / 2
+);
+
+plane(
+  L, H,
+  rightWallMat,
+  WALL_FACE - 0.012,
+  H / 2,
+  Z,
+  0, -Math.PI / 2
+);
+
+// 壁の端の見切り
 for (const side of [-1, 1]) {
-  addBox(0.035, 0.15, L, metalDark, side * (W / 2 - 0.15), 0.075, Z);
-  addBox(0.025, 0.025, L, metal, side * (W / 2 - 0.145), 0.17, Z);
-  addBox(0.025, 0.045, L, metal, side * (W / 2 - 0.15), H - 0.18, Z);
+  box(
+    0.035, 0.14, L,
+    darkMetal,
+    side * (WALL_FACE - 0.04),
+    0.07,
+    Z
+  );
+
+  box(
+    0.025, 0.035, L,
+    lightMetal,
+    side * (WALL_FACE - 0.04),
+    H - 0.12,
+    Z
+  );
 }
 
-// Ceiling panel seams and maintenance panels.
-for (let z = WORLD.start - 0.6; z > WORLD.end; z -= 1.2) {
-  addBox(W - 0.16, 0.012, 0.014, simpleMaterial(0x777873), 0, H - 0.018, z);
-}
-for (const z of [8, -16]) {
-  addBox(0.8, 0.025, 0.8, metalDark, 1.35, H - 0.02, z);
-  addBox(0.7, 0.012, 0.7, simpleMaterial(0xaaa9a2), 1.35, H - 0.04, z);
-}
+// 奥の壁
+box(
+  W, H, 0.2,
+  darkMetal,
+  0, H / 2, WORLD.end
+);
+
+plane(
+  W, H,
+  wallMaterial,
+  0, H / 2, WORLD.end + 0.105,
+  0, 0
+);
 
 // ==========================================
-// 6. TACTILE PAVING
+// 7. 天井パネル
 // ==========================================
-function makeTactileTexture() {
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = 256;
-  const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#a98224";
-  ctx.fillRect(0, 0, 256, 256);
 
-  for (let i = 0; i < 4; i++) {
-    const x = 28 + i * 66;
-    const grad = ctx.createLinearGradient(x - 8, 0, x + 8, 0);
-    grad.addColorStop(0, "#82651e");
-    grad.addColorStop(0.35, "#d4b443");
-    grad.addColorStop(0.7, "#c7a43a");
-    grad.addColorStop(1, "#80651f");
-    ctx.fillStyle = grad;
-    ctx.fillRect(x - 8, 0, 16, 256);
-  }
-  ctx.fillStyle = "#795f20";
-  for (let y = 0; y < 256; y += 128) ctx.fillRect(0, y, 256, 2);
-  return makeCanvasTexture(canvas, true);
-}
-const tactileMaterial = new THREE.MeshStandardMaterial({
-  map: repeated(makeTactileTexture(), 1, L),
-  roughness: 0.95,
-  side: THREE.DoubleSide
+const seamMaterial = new THREE.MeshStandardMaterial({
+  color: 0x656864,
+  roughness: 0.9
 });
-addPlane(0.42, L, tactileMaterial, 0, 0.018, Z, -Math.PI / 2);
+
+for (
+  let z = WORLD.start - 0.6;
+  z > WORLD.end;
+  z -= 0.8
+) {
+  box(
+    W - 0.08, 0.012, 0.012,
+    seamMaterial,
+    0, H - 0.025, z
+  );
+}
 
 // ==========================================
-// 7. WALL EQUIPMENT
+// 8. 点字ブロック
 // ==========================================
-function posterTexture(title, subtitle, headerColor) {
+
+const tactileCanvas = document.createElement("canvas");
+tactileCanvas.width = 256;
+tactileCanvas.height = 256;
+
+const tactileCtx = tactileCanvas.getContext("2d");
+
+tactileCtx.fillStyle = "#b18b31";
+tactileCtx.fillRect(0, 0, 256, 256);
+
+for (let i = 0; i < 4; i++) {
+  const x = 32 + i * 64;
+
+  const gradient = tactileCtx.createLinearGradient(
+    x - 8, 0, x + 8, 0
+  );
+
+  gradient.addColorStop(0, "#80601f");
+  gradient.addColorStop(0.4, "#d1ad43");
+  gradient.addColorStop(1, "#896a25");
+
+  tactileCtx.fillStyle = gradient;
+  tactileCtx.fillRect(x - 8, 0, 16, 256);
+}
+
+const tactileTexture = new THREE.CanvasTexture(tactileCanvas);
+tactileTexture.wrapS = THREE.RepeatWrapping;
+tactileTexture.wrapT = THREE.RepeatWrapping;
+tactileTexture.encoding = THREE.sRGBEncoding;
+tactileTexture.repeat.set(1, L / 0.3);
+
+const tactileMaterial = new THREE.MeshStandardMaterial({
+  map: tactileTexture,
+  roughness: 0.9
+});
+
+plane(
+  0.55, L,
+  tactileMaterial,
+  0, 0.025, Z,
+  -Math.PI / 2
+);
+
+// ==========================================
+// 9. ポスター
+// ==========================================
+
+function createPosterTexture(title, subtitle, color) {
   const canvas = document.createElement("canvas");
   canvas.width = 512;
   canvas.height = 640;
+
   const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#e9e5d9";
+
+  ctx.fillStyle = "#e6e3d9";
   ctx.fillRect(0, 0, 512, 640);
-  ctx.fillStyle = headerColor;
-  ctx.fillRect(0, 0, 512, 105);
-  ctx.fillStyle = "#fff";
-  ctx.font = "bold 36px sans-serif";
-  ctx.fillText(title, 28, 69);
+
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, 512, 100);
+
+  ctx.fillStyle = "white";
+  ctx.font = "bold 35px sans-serif";
+  ctx.fillText(title, 24, 65);
+
   ctx.fillStyle = "#333";
   ctx.font = "bold 28px sans-serif";
-  ctx.fillText(subtitle, 30, 160);
-  ctx.fillStyle = "#c9ccc5";
-  ctx.fillRect(32, 190, 448, 250);
-  ctx.fillStyle = "#829087";
-  ctx.fillRect(50, 208, 412, 214);
-  ctx.fillStyle = "#e8e3d7";
-  ctx.fillRect(120, 260, 275, 120);
-  ctx.fillStyle = "#526b68";
-  for (let i = 0; i < 5; i++) ctx.fillRect(140 + i * 48, 280, 23, 75);
+  ctx.fillText(subtitle, 28, 155);
+
+  ctx.fillStyle = "#bfc5c0";
+  ctx.fillRect(30, 190, 452, 235);
+
+  ctx.fillStyle = "#687e7a";
+  ctx.fillRect(52, 210, 408, 195);
+
+  ctx.fillStyle = "#e6e0d1";
+  ctx.fillRect(105, 260, 300, 100);
+
   ctx.fillStyle = "#333";
-  ctx.font = "bold 24px sans-serif";
-  ctx.fillText("INFORMATION", 32, 500);
+  ctx.font = "bold 23px sans-serif";
+  ctx.fillText("INFORMATION", 30, 485);
+
   ctx.font = "18px sans-serif";
-  ctx.fillText("PLEASE CHECK THE NOTICE", 32, 540);
-  ctx.fillText("THANK YOU FOR YOUR", 32, 575);
-  ctx.fillText("COOPERATION.", 32, 605);
-  return makeCanvasTexture(canvas, true);
+  ctx.fillText("PLEASE CHECK THE NOTICE", 30, 530);
+  ctx.fillText("THANK YOU FOR YOUR", 30, 565);
+  ctx.fillText("COOPERATION.", 30, 595);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.encoding = THREE.sRGBEncoding;
+  return texture;
 }
 
 function addPoster(side, z, title, subtitle, color) {
-  const frameX = side * (W / 2 - 0.13);
-  addBox(0.055, 1.2, 0.9, metalDark, frameX, 1.88, z);
+  const x = side * (WALL_FACE - 0.045);
+
+  box(
+    0.035, 1.08, 0.72,
+    darkMetal,
+    x, 1.8, z
+  );
+
   const poster = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.79, 1.08),
+    new THREE.PlaneGeometry(0.65, 0.98),
     new THREE.MeshBasicMaterial({
-      map: posterTexture(title, subtitle, color),
+      map: createPosterTexture(title, subtitle, color),
       side: THREE.DoubleSide
     })
   );
-  poster.position.set(side * (W / 2 - 0.17), 1.88, z);
-  poster.rotation.y = side < 0 ? Math.PI / 2 : -Math.PI / 2;
+
+  poster.position.set(
+    side * (WALL_FACE - 0.075),
+    1.8,
+    z
+  );
+
+  poster.rotation.y = side < 0
+    ? Math.PI / 2
+    : -Math.PI / 2;
+
   scene.add(poster);
 }
-addPoster(-1, 6.5, "INFORMATION", "施設のご案内", "#36576c");
-addPoster(-1, 5.2, "GUIDE", "地下通路のご案内", "#536a5a");
 
-function addServiceDoor(side, z) {
-  const x = side * (W / 2 - 0.13);
-  addBox(0.07, 2.12, 0.98, metalDark, x, 1.08, z);
-  addBox(0.045, 1.98, 0.84, doorMat, x - side * 0.045, 1.05, z);
-  addBox(0.025, 1.68, 0.65, simpleMaterial(0x858987), x - side * 0.075, 1.05, z);
-  addBox(0.025, 0.22, 0.12, metalDark, x - side * 0.09, 1.08, z - 0.29);
-  addBox(0.03, 0.12, 0.045, black, x - side * 0.11, 1.08, z - 0.29);
-  addBox(0.025, 0.14, 0.34, white, x - side * 0.09, 1.9, z);
-}
-addServiceDoor(1, -8);
-addServiceDoor(-1, -19);
+addPoster(-1, 7, "INFORMATION", "施設のご案内", "#326b85");
+addPoster(-1, 5.8, "GUIDE", "地下通路のご案内", "#b38b3d");
+addPoster(-1, 0.5, "NOTICE", "お知らせ", "#9c7771");
+addPoster(1, -5, "INFORMATION", "ご利用案内", "#426b61");
 
-function addEmergencyCabinet(side, z) {
-  const x = side * (W / 2 - 0.13);
-  addBox(0.13, 0.36, 0.43, simpleMaterial(0x963d35), x, 1.42, z);
-  addBox(0.025, 0.22, 0.28, white, x - side * 0.08, 1.42, z);
-  addBox(0.02, 0.06, 0.14, simpleMaterial(0x2f7948), x - side * 0.10, 1.42, z);
+// ==========================================
+// 10. 点検扉・換気口
+// ==========================================
+
+function addDoor(side, z) {
+  const x = side * (WALL_FACE - 0.04);
+
+  box(
+    0.07, 2.0, 0.82,
+    darkMetal,
+    x, 1.05, z
+  );
+
+  box(
+    0.035, 1.88, 0.72,
+    lightMetal,
+    x - side * 0.045, 1.05, z
+  );
+
+  box(
+    0.025, 0.12, 0.05,
+    darkMetal,
+    x - side * 0.07, 1.0, z - 0.24
+  );
+
+  box(
+    0.02, 0.08, 0.03,
+    whiteMaterial,
+    x - side * 0.085, 1.0, z - 0.24
+  );
 }
-addEmergencyCabinet(-1, -12);
+
+addDoor(1, -10);
+addDoor(-1, -17);
 
 function addVent(side, z) {
-  const x = side * (W / 2 - 0.13);
-  const y = 2.88;
-  addBox(0.055, 0.46, 0.78, metalDark, x, y, z);
+  const x = side * (WALL_FACE - 0.04);
+
+  box(
+    0.04, 0.42, 0.58,
+    darkMetal,
+    x, 2.45, z
+  );
+
   for (let i = 0; i < 7; i++) {
-    addBox(0.025, 0.025, 0.66, metal, x - side * 0.04, y - 0.18 + i * 0.06, z);
+    box(
+      0.02, 0.025, 0.49,
+      lightMetal,
+      x - side * 0.03,
+      2.28 + i * 0.055,
+      z
+    );
   }
 }
-addVent(-1, -22);
-addVent(1, 3);
+
+addVent(1, -20);
+addVent(-1, 3);
 
 // ==========================================
-// 8. EXIT SIGN AND FAR END
+// 11. 案内板
 // ==========================================
-function makeSignTexture() {
-  const canvas = document.createElement("canvas");
-  canvas.width = 512;
-  canvas.height = 160;
-  const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#176b43";
-  ctx.fillRect(0, 0, 512, 160);
-  ctx.fillStyle = "#fff";
-  ctx.textAlign = "center";
-  ctx.font = "bold 65px sans-serif";
-  ctx.fillText("EXIT  →", 256, 75);
-  ctx.font = "26px sans-serif";
-  ctx.fillText("出口案内", 256, 125);
-  return makeCanvasTexture(canvas, true);
-}
-addBox(1.55, 0.5, 0.08, metalDark, 0, 3.02, -22.7);
-const exitSign = new THREE.Mesh(
-  new THREE.PlaneGeometry(1.43, 0.42),
-  new THREE.MeshBasicMaterial({ map: makeSignTexture(), side: THREE.DoubleSide })
+
+const signCanvas = document.createElement("canvas");
+signCanvas.width = 512;
+signCanvas.height = 128;
+
+const signCtx = signCanvas.getContext("2d");
+
+signCtx.fillStyle = "#e7d95c";
+signCtx.fillRect(0, 0, 512, 128);
+
+signCtx.fillStyle = "#282719";
+signCtx.font = "bold 55px sans-serif";
+signCtx.textAlign = "center";
+signCtx.fillText("↑ 出口 8", 256, 76);
+
+signCtx.font = "22px sans-serif";
+signCtx.fillText("EXIT", 256, 108);
+
+const signTexture = new THREE.CanvasTexture(signCanvas);
+signTexture.encoding = THREE.sRGBEncoding;
+
+box(
+  1.9, 0.48, 0.08,
+  darkMetal,
+  0, 2.75, 7
 );
-exitSign.position.set(0, 3.02, -22.65);
-scene.add(exitSign);
 
-addBox(W, H, 0.22, simpleMaterial(0xaaa9a3), 0, H / 2, WORLD.end);
-addBox(W, 0.12, 0.12, metalDark, 0, 0.07, WORLD.end + 0.02);
+const sign = new THREE.Mesh(
+  new THREE.PlaneGeometry(1.8, 0.4),
+  new THREE.MeshBasicMaterial({
+    map: signTexture,
+    side: THREE.DoubleSide
+  })
+);
+
+sign.position.set(0, 2.75, 7.05);
+scene.add(sign);
 
 // ==========================================
-// 9. PROCEDURAL AUDIO
+// 12. 音声
 // ==========================================
+
 let audioContext = null;
 let audioMaster = null;
 let noiseBuffer = null;
 
-function createNoiseBuffer(ctx) {
-  const buffer = ctx.createBuffer(1, ctx.sampleRate * 4, ctx.sampleRate);
+function createNoise(ctx) {
+  const buffer = ctx.createBuffer(
+    1,
+    ctx.sampleRate * 4,
+    ctx.sampleRate
+  );
+
   const data = buffer.getChannelData(0);
-  let filtered = 0;
+  let smooth = 0;
+
   for (let i = 0; i < data.length; i++) {
-    filtered = filtered * 0.88 + (Math.random() * 2 - 1) * 0.12;
-    data[i] = filtered * 3;
+    smooth = smooth * 0.88 +
+      (Math.random() * 2 - 1) * 0.12;
+
+    data[i] = smooth * 3;
   }
+
   return buffer;
 }
 
 function initAudio() {
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextClass) return;
+  const AudioClass =
+    window.AudioContext || window.webkitAudioContext;
+
+  if (!AudioClass) return;
 
   if (!audioContext) {
-    audioContext = new AudioContextClass();
+    audioContext = new AudioClass();
+
     const ctx = audioContext;
+
     audioMaster = ctx.createGain();
     audioMaster.gain.value = 0.5;
     audioMaster.connect(ctx.destination);
-    noiseBuffer = createNoiseBuffer(ctx);
 
-    // Soft ventilation rumble.
+    noiseBuffer = createNoise(ctx);
+
+    // 空調音
     const air = ctx.createBufferSource();
     air.buffer = noiseBuffer;
     air.loop = true;
+
     const airFilter = ctx.createBiquadFilter();
     airFilter.type = "lowpass";
-    airFilter.frequency.value = 650;
+    airFilter.frequency.value = 700;
+
     const airGain = ctx.createGain();
-    airGain.gain.value = 0.045;
+    airGain.gain.value = 0.04;
+
     air.connect(airFilter);
     airFilter.connect(airGain);
     airGain.connect(audioMaster);
     air.start();
 
-    // Distant train-like low rumble.
+    // 遠くの電車のような音
     const train = ctx.createBufferSource();
     train.buffer = noiseBuffer;
     train.loop = true;
+
     const trainFilter = ctx.createBiquadFilter();
     trainFilter.type = "lowpass";
-    trainFilter.frequency.value = 190;
+    trainFilter.frequency.value = 180;
+
     const trainGain = ctx.createGain();
-    trainGain.gain.value = 0.012;
+    trainGain.gain.value = 0.014;
+
     train.connect(trainFilter);
     trainFilter.connect(trainGain);
     trainGain.connect(audioMaster);
     train.start();
 
-    const swell = ctx.createOscillator();
-    const swellDepth = ctx.createGain();
-    swell.frequency.value = 0.035;
-    swellDepth.gain.value = 0.009;
-    swell.connect(swellDepth);
-    swellDepth.connect(trainGain.gain);
-    swell.start();
-
+    // 低い機械音
     const hum = ctx.createOscillator();
     const humGain = ctx.createGain();
+
     hum.type = "sine";
     hum.frequency.value = 58;
     humGain.gain.value = 0.018;
+
     hum.connect(humGain);
     humGain.connect(audioMaster);
     hum.start();
@@ -603,77 +871,116 @@ function initAudio() {
 
 function playFootstep(running) {
   if (!audioContext || audioContext.state !== "running") return;
+
   const ctx = audioContext;
   const now = ctx.currentTime;
 
   const noise = ctx.createBufferSource();
   noise.buffer = noiseBuffer;
+
   const filter = ctx.createBiquadFilter();
   filter.type = "lowpass";
-  filter.frequency.value = running ? 950 : 720;
-  const noiseGain = ctx.createGain();
-  noiseGain.gain.setValueAtTime(0.0001, now);
-  noiseGain.gain.exponentialRampToValueAtTime(running ? 0.14 : 0.105, now + 0.006);
-  noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.13);
+  filter.frequency.value = running ? 900 : 650;
+
+  const gain = ctx.createGain();
+
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(
+    running ? 0.14 : 0.1,
+    now + 0.006
+  );
+  gain.gain.exponentialRampToValueAtTime(
+    0.0001,
+    now + 0.13
+  );
+
   noise.connect(filter);
-  filter.connect(noiseGain);
-  noiseGain.connect(audioMaster);
+  filter.connect(gain);
+  gain.connect(audioMaster);
+
   noise.start(now, Math.random() * 2.5, 0.14);
 
   const thump = ctx.createOscillator();
   const thumpGain = ctx.createGain();
+
   thump.type = "sine";
-  thump.frequency.setValueAtTime(running ? 88 : 72, now);
-  thump.frequency.exponentialRampToValueAtTime(42, now + 0.07);
+  thump.frequency.setValueAtTime(
+    running ? 85 : 70,
+    now
+  );
+
+  thump.frequency.exponentialRampToValueAtTime(
+    40,
+    now + 0.07
+  );
+
   thumpGain.gain.setValueAtTime(0.0001, now);
-  thumpGain.gain.exponentialRampToValueAtTime(running ? 0.055 : 0.04, now + 0.004);
-  thumpGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
+  thumpGain.gain.exponentialRampToValueAtTime(
+    running ? 0.055 : 0.04,
+    now + 0.004
+  );
+  thumpGain.gain.exponentialRampToValueAtTime(
+    0.0001,
+    now + 0.09
+  );
+
   thump.connect(thumpGain);
   thumpGain.connect(audioMaster);
+
   thump.start(now);
   thump.stop(now + 0.1);
 }
 
 // ==========================================
-// 10. PLAYER INPUT AND POINTER LOCK
+// 13. 操作
 // ==========================================
+
 let yaw = 0;
 let pitch = 0;
 let started = false;
+
 const keys = {};
-const playerSpeed = 3.5;
-const playerRadius = 0.34;
+
 const movementKeys = [
-  "KeyW", "KeyA", "KeyS", "KeyD", "ShiftLeft", "ShiftRight"
+  "KeyW", "KeyA", "KeyS", "KeyD",
+  "ShiftLeft", "ShiftRight"
 ];
 
 function clearKeys() {
-  movementKeys.forEach(key => { keys[key] = false; });
+  for (const key of movementKeys) {
+    keys[key] = false;
+  }
 }
 
 function startGame() {
   initAudio();
-  if (document.pointerLockElement === renderer.domElement) return;
+
+  if (document.pointerLockElement === renderer.domElement) {
+    return;
+  }
+
   try {
-    const result = renderer.domElement.requestPointerLock();
+    const result =
+      renderer.domElement.requestPointerLock();
+
     if (result && result.catch) {
-      result.catch(error => {
-        console.log(error);
-        description.textContent = "マウスロックに失敗しました。Enterでもう一度試してください。";
-      });
+      result.catch(error => console.log(error));
     }
   } catch (error) {
     console.log(error);
-    description.textContent = "マウスロックを開始できませんでした。";
   }
 }
 
 document.addEventListener("keydown", event => {
   if (event.code === "Enter") {
     event.preventDefault();
-    if (!event.repeat) startGame();
+
+    if (!event.repeat) {
+      startGame();
+    }
     return;
   }
+
   if (movementKeys.includes(event.code)) {
     event.preventDefault();
     keys[event.code] = true;
@@ -683,113 +990,175 @@ document.addEventListener("keydown", event => {
 document.addEventListener("keyup", event => {
   keys[event.code] = false;
 });
+
 window.addEventListener("blur", clearKeys);
 
 document.addEventListener("pointerlockchange", () => {
-  started = document.pointerLockElement === renderer.domElement;
+  started =
+    document.pointerLockElement === renderer.domElement;
+
   overlay.style.display = started ? "none" : "flex";
   crosshair.style.display = started ? "block" : "none";
+
   clearKeys();
 
   if (audioMaster && audioContext) {
     const now = audioContext.currentTime;
+
     audioMaster.gain.cancelScheduledValues(now);
-    audioMaster.gain.setTargetAtTime(started ? 0.5 : 0.0, now, 0.15);
+    audioMaster.gain.setTargetAtTime(
+      started ? 0.5 : 0,
+      now,
+      0.15
+    );
   }
 
   if (!started) {
-    description.textContent = "一時停止中。Enterで再開できます。";
-    enterText.textContent = "PRESS ENTER TO RESUME";
+    document.getElementById("enterText").textContent =
+      "PRESS ENTER TO RESUME";
   }
-});
-
-document.addEventListener("pointerlockerror", () => {
-  description.textContent = "マウスロックに失敗しました。Enterでもう一度試してください。";
 });
 
 document.addEventListener("mousemove", event => {
   if (!started) return;
+
   yaw -= event.movementX * 0.002;
   pitch -= event.movementY * 0.002;
-  pitch = Math.max(-1.35, Math.min(1.35, pitch));
+
+  pitch = Math.max(
+    -1.35,
+    Math.min(1.35, pitch)
+  );
+
   camera.rotation.order = "YXZ";
   camera.rotation.y = yaw;
   camera.rotation.x = pitch;
 });
 
 // ==========================================
-// 11. COLLISION AND MOVEMENT
+// 14. 衝突判定・移動
 // ==========================================
+
 const clock = new THREE.Clock();
+
+const PLAYER_RADIUS = 0.32;
+const MOVE_SPEED = 3.5;
+
+const INNER_WALL = WALL_FACE - 0.012;
+
+const MIN_X = -INNER_WALL + PLAYER_RADIUS;
+const MAX_X = INNER_WALL - PLAYER_RADIUS;
+
+const MIN_Z = WORLD.end + 0.22 + PLAYER_RADIUS;
+const MAX_Z = WORLD.start - 0.22 - PLAYER_RADIUS;
+
 let walkingTime = 0;
 let footstepTimer = 0;
-const baseCameraHeight = 1.62;
-const innerWallX = W / 2 - 0.11;
-const safeMinX = -innerWallX + playerRadius;
-const safeMaxX = innerWallX - playerRadius;
-const safeMinZ = WORLD.end + 0.11 + playerRadius;
-const safeMaxZ = WORLD.start - 0.11 - playerRadius;
 
 function canMove(x, z) {
-  return x >= safeMinX && x <= safeMaxX &&
-         z >= safeMinZ && z <= safeMaxZ;
+  return (
+    x >= MIN_X &&
+    x <= MAX_X &&
+    z >= MIN_Z &&
+    z <= MAX_Z
+  );
 }
 
 function updateMovement(delta) {
   let forward = 0;
   let sideways = 0;
+
   if (keys["KeyW"]) forward++;
   if (keys["KeyS"]) forward--;
+
   if (keys["KeyD"]) sideways++;
   if (keys["KeyA"]) sideways--;
 
-  const inputLength = Math.hypot(forward, sideways);
-  if (inputLength > 0) {
-    forward /= inputLength;
-    sideways /= inputLength;
+  const len = Math.hypot(forward, sideways);
+
+  if (len > 0) {
+    forward /= len;
+    sideways /= len;
   }
 
-  const running = Boolean(keys["ShiftLeft"] || keys["ShiftRight"]);
-  const speed = playerSpeed * (running ? 1.7 : 1);
-  const totalStep = speed * delta;
-  const dx = -Math.sin(yaw) * forward * totalStep +
-              Math.cos(yaw) * sideways * totalStep;
-  const dz = -Math.cos(yaw) * forward * totalStep -
-              Math.sin(yaw) * sideways * totalStep;
+  const running =
+    keys["ShiftLeft"] || keys["ShiftRight"];
+
+  const speed = MOVE_SPEED * (running ? 1.7 : 1);
+  const distance = speed * delta;
+
+  const dx =
+    -Math.sin(yaw) * forward * distance +
+    Math.cos(yaw) * sideways * distance;
+
+  const dz =
+    -Math.cos(yaw) * forward * distance -
+    Math.sin(yaw) * sideways * distance;
 
   const oldX = camera.position.x;
   const oldZ = camera.position.z;
-  const distance = Math.hypot(dx, dz);
-  const steps = Math.max(1, Math.ceil(distance / 0.045));
-  const stepX = dx / steps;
-  const stepZ = dz / steps;
+
+  // 小刻みに移動して壁へのめり込みを防止
+  const steps = Math.max(
+    1,
+    Math.ceil(Math.hypot(dx, dz) / 0.04)
+  );
 
   for (let i = 0; i < steps; i++) {
-    const tryX = camera.position.x + stepX;
-    if (canMove(tryX, camera.position.z)) camera.position.x = tryX;
+    const sx = dx / steps;
+    const sz = dz / steps;
 
-    const tryZ = camera.position.z + stepZ;
-    if (canMove(camera.position.x, tryZ)) camera.position.z = tryZ;
+    const nextX = camera.position.x + sx;
+
+    if (canMove(nextX, camera.position.z)) {
+      camera.position.x = nextX;
+    }
+
+    const nextZ = camera.position.z + sz;
+
+    if (canMove(camera.position.x, nextZ)) {
+      camera.position.z = nextZ;
+    }
   }
 
-  camera.position.x = THREE.MathUtils.clamp(camera.position.x, safeMinX, safeMaxX);
-  camera.position.z = THREE.MathUtils.clamp(camera.position.z, safeMinZ, safeMaxZ);
+  camera.position.x = THREE.MathUtils.clamp(
+    camera.position.x, MIN_X, MAX_X
+  );
 
-  const moved = Math.hypot(camera.position.x - oldX, camera.position.z - oldZ) > 0.001;
+  camera.position.z = THREE.MathUtils.clamp(
+    camera.position.z, MIN_Z, MAX_Z
+  );
+
+  const moved =
+    Math.hypot(
+      camera.position.x - oldX,
+      camera.position.z - oldZ
+    ) > 0.001;
+
   if (moved) {
     footstepTimer += delta;
+
     const interval = running ? 0.34 : 0.52;
+
     if (footstepTimer >= interval) {
       footstepTimer %= interval;
       playFootstep(running);
     }
-    walkingTime += delta * (running ? 12.5 : 8.5);
-    camera.position.y = baseCameraHeight +
-      Math.sin(walkingTime) * (running ? 0.028 : 0.014);
+
+    walkingTime += delta * (running ? 12 : 8.5);
+
+    camera.position.y =
+      BASE_HEIGHT +
+      Math.sin(walkingTime) *
+      (running ? 0.025 : 0.012);
+
   } else {
     footstepTimer = 0;
+
     camera.position.y = THREE.MathUtils.lerp(
-      camera.position.y, baseCameraHeight, Math.min(1, delta * 10)
+      camera.position.y,
+      BASE_HEIGHT,
+      Math.min(1, delta * 10)
     );
   }
 
@@ -799,21 +1168,37 @@ function updateMovement(delta) {
 }
 
 // ==========================================
-// 12. ANIMATION AND RESIZE
+// 15. 描画・画面サイズ
 // ==========================================
+
 function animate() {
   requestAnimationFrame(animate);
+
   const delta = Math.min(clock.getDelta(), 0.05);
-  if (started) updateMovement(delta);
+
+  if (started) {
+    updateMovement(delta);
+  }
+
   renderer.render(scene, camera);
 }
+
 animate();
 
 window.addEventListener("resize", () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.aspect =
+    window.innerWidth / window.innerHeight;
+
   camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+
+  renderer.setSize(
+    window.innerWidth,
+    window.innerHeight
+  );
+
+  renderer.setPixelRatio(
+    Math.min(window.devicePixelRatio || 1, 1.5)
+  );
 });
 
 })();
